@@ -184,16 +184,16 @@ export class OpenAIChatThread {
    * @param fn - The function to append.
    * @returns The updated OpenAIChatThread instance.
    */
-  addTool(fn: ChatCompletionTool | FunctionDefinition): OpenAIChatThread {
+  addTool(chatToolFunction: ChatCompletionTool | FunctionDefinition): OpenAIChatThread {
     // if the function is a FunctionDefinition, we need to convert it to a ChatCompletionTool
-    if (!hasOwn(fn, "type")) {
+    if (!hasOwn(chatToolFunction, "type")) {
       this.tools.push({
         type: "function",
-        function: fn as FunctionDefinition,
+        function: chatToolFunction as FunctionDefinition,
       });
     }
-    if (hasOwn(fn, "type")) {
-      this.tools.push(fn as ChatCompletionTool);
+    if (hasOwn(chatToolFunction, "type")) {
+      this.tools.push(chatToolFunction as ChatCompletionTool);
     }
 
     return this;
@@ -207,19 +207,19 @@ export class OpenAIChatThread {
    * @returns The updated OpenAIChatThread instance.
    */
   addToolWithFunction(
-    fn: ChatCompletionTool | FunctionDefinition,
-    toolFunction: Function
+    chatToolFunction: ChatCompletionTool | FunctionDefinition,
+    toolFunctionInJS: Function
   ): OpenAIChatThread {
-    this.addTool(fn);
+    this.addTool(chatToolFunction);
 
     // get the name of the function to associate with the tool function in the toolFunctionmap
     let name = "";
-    if (hasOwn(fn, "type")) {
-      name = (fn as ChatCompletionTool).function.name;
+    if (hasOwn(chatToolFunction, "type")) {
+      name = (chatToolFunction as ChatCompletionTool).function.name;
     } else {
-      name = (fn as FunctionDefinition).name;
+      name = (chatToolFunction as FunctionDefinition).name;
     }
-    this.setToolFunction(name, toolFunction);
+    this.setToolFunction(name, toolFunctionInJS);
 
     return this;
   }
@@ -242,8 +242,8 @@ export class OpenAIChatThread {
    * @param fn - The tool function to be set.
    * @returns The updated OpenAIChatThread instance.
    */
-  setToolFunction(name: string, fn: Function): OpenAIChatThread {
-    this.toolFunctionmap[name] = fn;
+  setToolFunction(name: string, toolFunctionInJS: Function): OpenAIChatThread {
+    this.toolFunctionmap[name] = toolFunctionInJS;
     return this;
   }
 
@@ -280,7 +280,7 @@ export class OpenAIChatThread {
 
         // add this completion to the list of received completion once ready and not aborted
         if (this.streamAbortController !== undefined) {
-          if (this.debug) console.log("-----------------------------------Stream completed", total);
+          if (this.debug) console.log("Stream completed", total);
 
           this.receivedCompletions.push({
             id: "stream",

@@ -37,11 +37,11 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
       {
         role: "system",
         content:
-          "You are a translator into Albanian. The user will give you a text in English  and you will provide the translation in Albanian",
+          "You are a translator into German. The user will give you a text in English  and you will provide the translation in German",
       },
       {
         role: "user",
-        content: "Give a 100 word poem in Albanian.",
+        content: "Give a 100 word poem in German.",
       },
     ])
     .runPromptStream();
