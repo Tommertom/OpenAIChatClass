@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { OpenAIChatThread, makeChatTool } from "./openai_chat";
 
@@ -47,15 +48,16 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
 
   console.log(JSON.stringify(res, null, 2), JSON.stringify(newOpenAIthread.getMessages(), null, 2));
 
-  let resa = await newOpenAIthread.appendMessage({
-    role: "user",
-    content: "I am fine, thank you. How are you?",
-  });
-  // .runPromptWithMessageResponse();
+  let resa = await newOpenAIthread
+    .appendMessage({
+      role: "user",
+      content: "I am fine, thank you. How are you?",
+    })
+    .runPromptWithMessageResponse();
 
-  // console.log(res);
+  console.log(res);
 
-  // console.log("All messages", newOpenAIthread.getMessages());
+  console.log("All messages", newOpenAIthread.getMessages());
 
   const chatTool = makeChatTool(
     "get_current_weather",
@@ -79,36 +81,33 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
     .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
     .addToolWithFunction(chatTool, getCurrentWeather);
 
-  // let res2 = await thread2.runPrompt();
+  let res2 = await thread2.runPrompt();
+  console.log("addToolWithFunction res", JSON.stringify(res2, null, 2));
 
-  // console.log("addToolWithFunction res", JSON.stringify(res2, null, 2));
+  console.log("Messages", JSON.stringify(thread2.getMessages(), null, 2));
 
-  //  console.log("Messages", JSON.stringify(thread2.getMessages(), null, 2));
+  let res3 = await thread2.runPrompt();
+  console.log("Second run with same thread", JSON.stringify(res3, null, 2));
 
-  // let res3 = await thread2.runPrompt();
-  // console.log("Second run with same thread", JSON.stringify(res3, null, 2));
+  let res4 = await thread2
+    .setMaxTokens(300)
+    .runVisionPrompt(
+      "What do I see on this picture?",
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+    );
 
-  let res4 = await thread2.setMaxTokens(300);
-  // .runVisionPrompt(
-  //   "What do I see on this picture?",
-  //   "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
-  // );
+  console.log("runVisionVisionPrompt thread", JSON.stringify(res4, null, 2));
 
-  //     console.log("runVisionVisionPrompt thread", JSON.stringify(res4, null, 2));
+  console.log("Messages", JSON.stringify(thread2.getMessages(), null, 2));
 
-  //  console.log(
-  //    "Mfffffffffffffffffffffffffffessages",
-  //    JSON.stringify(thread2.getMessages(), null, 2)
-  //  );
+  let res5 = await thread2.runEmbeddingPrompt("What is the meaning of life?");
 
-  // let res5 = await thread2.runEmbeddingPrompt("What is the meaning of life?");
-
-  // console.log("runembbedings", JSON.stringify(res5.length, null, 2));
+  console.log("runembbedings", JSON.stringify(res5.length, null, 2));
   const speechFile = path.resolve("./speech.mp3");
-  //  let res6 = await thread2.runSpeechPromptAsBuffer("What is the meaning of life?");
-  // const buffer = Buffer.from(await res6.arrayBuffer());
-  // await fs.promises.writeFile(speechFile, res6);
+  let res6 = await thread2.runSpeechPromptAsBuffer("What is the meaning of life?");
 
-  // let res6 = await thread2.runModerationPromptAsBoolean("I am an idiot");
-  // console.log("runModerationPrompt", JSON.stringify(res6, null, 2));
+  await fs.promises.writeFile(speechFile, res6);
+
+  let res7 = await thread2.runModerationPromptAsBoolean("I am an idiot");
+  console.log("runModerationPrompt", JSON.stringify(res7, null, 2));
 })();
