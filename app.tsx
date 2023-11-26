@@ -136,7 +136,7 @@ Main example file
       .setDebug(true)
       .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
       .addToolWithFunction(getCurrentWeatherChatTool, getCurrentWeather)
-      .runPrompt()
+      .runPrompt({})
       .then((res) => {
         console.log("Intermediate response", res.getLastResponseAsChatCompletionResult());
         console.log("All messages", res.getMessages());

@@ -18,7 +18,7 @@ openaiWrapper
   .setTemperature(0.8)
   .appendUserMessage("Tell me a joke.")
   .appendMessage({ role: "assistant", content: "Why did the chicken cross the road?" })
-  .runPrompt()
+  .runPrompt({ seed: 100 })
   .then(() => {
     const lastResponse = openaiWrapper.getLastResponseAsMessageResult();
     console.log("Assistant's response:", lastResponse.content);
@@ -29,6 +29,28 @@ openaiWrapper
 ```
 
 This example sets the model, enables debug mode, adds user and assistant messages to the chat, runs the prompt, and then retrieves and prints the assistant's response. The builder pattern facilitates a clean and expressive way to interact with OpenAI's API, making it suitable for a variety of natural language processing tasks.
+
+The setters for calling the API are present as builders and also as options to provide to the `runPrompt` (and other) methods.
+
+Besides creating the class, there is also integration with RXJS to allow for streamed responses. Maybe in future turn this into signals?
+
+## Design objectives
+
+Use Builder Pattern: The class employs the builder pattern, allowing developers to configure and customize interactions with OpenAI's API through method chaining.
+
+Stay close to OpenAI: stay as close as possible to OpenAI's typings, and the JS SDK - for easy of maintenance
+
+Configurability: Developers can easily set various options, including temperature, timeout, and maximum tokens, tailoring the behavior of the OpenAI API to specific needs.
+
+Debugging Support: Includes a debug mode that, when enabled, provides additional information about the chat, tool calls, and other relevant details for debugging purposes.
+
+Stream Interface using RXJS: Offers an interface for monitoring messages, stream delta, and concatenated stream, providing a reactive approach to handling responses.
+
+Extensibility: Designed to be easily extensible, allowing for the addition of new features or adaptations to future changes in the OpenAI API.
+
+## Beta APIs - Assistants
+
+I have not implemented the Assistants API as it is in Beta. And it might require a total new class, as the APIs to Assistants are a group on their own.
 
 ## App.ts Examples:
 
