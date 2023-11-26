@@ -48,11 +48,9 @@ Stream Interface using RXJS: Offers an interface for monitoring messages, stream
 
 Extensibility: Designed to be easily extensible, allowing for the addition of new features or adaptations to future changes in the OpenAI API.
 
-## Beta APIs - Assistants
-
-I have not implemented the Assistants API as it is in Beta. And it might require a total new class, as the APIs to Assistants are a group on their own.
-
 ## App.ts Examples:
+
+See [App.tsx](./App.tsx) to see the various OpenAI endpoints in action using the builder pattern.
 
 DALL-E Example:
 Uses DALL-E to generate an image based on a prompt.
@@ -77,6 +75,10 @@ Converts user-provided text to speech and saves it as an MP3 file.
 
 Moderation Example:
 Moderates content based on user input.
+
+## Beta APIs - Assistants
+
+I have not implemented the Assistants API as it is in Beta. And it might require a total new class, as the APIs to Assistants are a group on their own.
 
 # Documentation
 
