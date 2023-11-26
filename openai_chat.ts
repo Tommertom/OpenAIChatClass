@@ -10,10 +10,12 @@ import {
 import { CompletionCreateParamsBase } from "openai/resources/completions";
 import { BehaviorSubject, Observable } from "rxjs";
 
-// https://github.com/openai/openai-node
-
+// can be more models than this
 type SupportedOpenAIModels = "gpt-3.5-turbo" | "gpt-4-1106-preview" | "gpt-3.5-turbo-1106";
 
+/**
+ * Represents the count of tokens and tool calls in an OpenAI chat thread.
+ */
 export interface OpenAIChatThreadCount {
   prompt_tokens: number;
   completion_tokens: number;
@@ -21,11 +23,20 @@ export interface OpenAIChatThreadCount {
   tool_calls: number;
 }
 
+/**
+ * Represents optional parameters for creating a completion.
+ */
 export interface CompletionCreateParamsBaseOptionals
   extends Omit<CompletionCreateParamsBase, "prompt" | "model"> {}
 
+/**
+ * Optional parameters for generating an image.
+ */
 export interface ImageGenerateParamsOptionsals extends Omit<ImageGenerateParams, "prompt"> {}
 
+/**
+ * Represents a chat thread for interacting with the OpenAI chat API.
+ */
 export class OpenAIChatThread {
   // the open AI interfaces
   private openai: OpenAI;
@@ -70,6 +81,12 @@ export class OpenAIChatThread {
   private streamConcated$: BehaviorSubject<string | undefined> = new BehaviorSubject<
     string | undefined
   >(undefined);
+
+  /****************************************************************************************
+
+    All configuration options for the OpenAIChatThread
+
+  *****************************************************************************************/
 
   constructor(apiKey: string, secret?: string) {
     if (apiKey === undefined) throw new Error("API Key is required");
@@ -139,51 +156,6 @@ export class OpenAIChatThread {
    */
   setMaxTokens(max_tokens: number): OpenAIChatThread {
     this.max_tokens = max_tokens;
-
-    return this;
-  }
-
-  /**
-   * Sets the messages for the OpenAIChatThread.
-   *
-   * @param messages - An array of ChatCompletionMessageParam objects representing the messages to be set.
-   * @returns The updated OpenAIChatThread instance.
-   */
-  setMessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
-    this.messages = [];
-    this._addmessages(messages);
-
-    return this;
-  }
-
-  // private methods
-  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
-    this.messages = this.messages.concat(messages);
-    this.messages$.next(messages);
-
-    return this;
-  }
-
-  /**
-   * Appends a message to the chat conversation and run the prompt.
-   *
-   * @param message - The message to append.
-   * @returns The updated OpenAIChatThread instance.
-   */
-  appendMessage(message: ChatCompletionMessageParam): OpenAIChatThread {
-    this._addmessages([message]);
-
-    return this;
-  }
-
-  /**
-   * Appends a user message to the OpenAIChatThread.
-   *
-   * @param message - The message to be appended.
-   * @returns The updated OpenAIChatThread instance.
-   */
-  appendUserMessage(message: string): OpenAIChatThread {
-    this._addmessages([{ content: message, role: "user" }]);
 
     return this;
   }
@@ -274,6 +246,66 @@ export class OpenAIChatThread {
    */
   setToolFunction(name: string, toolFunctionInJS: Function): OpenAIChatThread {
     this.toolFunctionmap[name] = toolFunctionInJS;
+
+    return this;
+  }
+
+  /**
+   * Retrieves the last response received.
+   *
+   * @returns The last response.
+   */
+  getLastResponse() {
+    return this.lastResponse;
+  }
+
+  /****************************************************************************************
+
+    TEXT GENERATION TEXT GENERATION TEXT GENERATION TEXT GENERATION TEXT GENERATION TEXT GENERATION
+    
+  *****************************************************************************************/
+
+  /**
+   * Sets the messages for the OpenAIChatThread.
+   *
+   * @param messages - An array of ChatCompletionMessageParam objects representing the messages to be set.
+   * @returns The updated OpenAIChatThread instance.
+   */
+  setMessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
+    this.messages = [];
+    this._addmessages(messages);
+
+    return this;
+  }
+
+  // private methods
+  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
+    this.messages = this.messages.concat(messages);
+    this.messages$.next(messages);
+
+    return this;
+  }
+
+  /**
+   * Appends a message to the chat conversation and run the prompt.
+   *
+   * @param message - The message to append.
+   * @returns The updated OpenAIChatThread instance.
+   */
+  appendMessage(message: ChatCompletionMessageParam): OpenAIChatThread {
+    this._addmessages([message]);
+
+    return this;
+  }
+
+  /**
+   * Appends a user message to the OpenAIChatThread.
+   *
+   * @param message - The message to be appended.
+   * @returns The updated OpenAIChatThread instance.
+   */
+  appendUserMessage(message: string): OpenAIChatThread {
+    this._addmessages([{ content: message, role: "user" }]);
 
     return this;
   }
@@ -383,6 +415,22 @@ export class OpenAIChatThread {
   }
 
   /**
+   * Returns an Observable that emits the stream delta as a string.
+   * @returns {Observable<string>} An Observable that emits the stream delta as a string.
+   */
+  getStreamDeltaAsObservable(): Observable<string | undefined> {
+    return this.streamDelta$.asObservable();
+  }
+
+  /**
+   * Returns an Observable that emits the concatenated stream as a string.
+   * @returns An Observable that emits the concatenated stream as a string.
+   */
+  getStreamConcatedAsObservable(): Observable<string | undefined> {
+    return this.streamConcated$.asObservable();
+  }
+
+  /**
    * Runs the prompt and returns a promise that resolves to the chat completion response.
    * @returns A promise that resolves to a `OpenAI.Chat.Completions.ChatCompletion` object.
    */
@@ -459,6 +507,22 @@ export class OpenAIChatThread {
   }
 
   /**
+   * Retrieves the messages stored in the chat.
+   * @returns An array of ChatCompletionMessageParam objects representing the messages.
+   */
+  getMessages(): ChatCompletionMessageParam[] {
+    return this.messages;
+  }
+
+  /**
+   * Returns an Observable that emits an array of ChatCompletionMessageParam objects whenever there is a new message.
+   * @returns {Observable<ChatCompletionMessageParam[]>} The Observable that emits the array of ChatCompletionMessageParam objects.
+   */
+  getMessagesAsObservable(): Observable<ChatCompletionMessageParam[]> {
+    return this.messages$.asObservable();
+  }
+
+  /**
    * Returns the last response as a ChatCompletion object.
    * @returns {OpenAI.Chat.Completions.ChatCompletion} The last response as a ChatCompletion object.
    */
@@ -473,6 +537,12 @@ export class OpenAIChatThread {
   getLastResponseAsMessageResult() {
     return this.getLastResponseAsChatCompletionResult().choices[0].message;
   }
+
+  /****************************************************************************************
+
+    VISION VISION VISION VISION VISION VISION VISION VISION VISION VISION VISION VISION VISION 
+
+  *****************************************************************************************/
 
   /**
    * Runs a vision prompt using the OpenAI chat completions API.
@@ -531,6 +601,12 @@ export class OpenAIChatThread {
     return this.lastResponse as OpenAI.Chat.Completions.ChatCompletion;
   }
 
+  /****************************************************************************************
+
+    EMBEDDINGS EMBEDDINGS EMBEDDINGS EMBEDDINGS EMBEDDINGS EMBEDDINGS EMBEDDINGS EMBEDDINGS 
+
+  *****************************************************************************************/
+
   /**
    * Runs an embedding prompt using the OpenAI API.
    * @param input The input string for the prompt.
@@ -548,9 +624,19 @@ export class OpenAIChatThread {
     });
   }
 
+  /**
+   * Returns the last response as an embedding result.
+   * @returns {number[]} The last response as an array of numbers representing the embedding result.
+   */
   getLastResponseAsEmbbedingResult() {
     return this.lastResponse as number[];
   }
+
+  /****************************************************************************************
+
+    SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH SPEECH 
+
+  *****************************************************************************************/
 
   /**
    * Runs a speech prompt using the OpenAI API.
@@ -608,6 +694,12 @@ export class OpenAIChatThread {
       .then((arrayBuffer) => Buffer.from(arrayBuffer));
   }
 
+  /****************************************************************************************
+
+    MODERATION MODERATION MODERATION MODERATION MODERATION MODERATION MODERATION MODERATION
+
+  *****************************************************************************************/
+
   /**
    * Runs a moderation prompt using the OpenAI API.
    * @param input The input string for the moderation prompt.
@@ -639,6 +731,12 @@ export class OpenAIChatThread {
     return response.flagged;
   }
 
+  /****************************************************************************************
+
+    IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE IMAGE
+
+  *****************************************************************************************/
+
   /**
    * Runs the image prompt generation using the OpenAI API.
    *
@@ -663,14 +761,11 @@ export class OpenAIChatThread {
     return (this.lastResponse as OpenAI.Images.ImagesResponse)?.data[0];
   }
 
-  /**
-   * Retrieves the last response received.
-   *
-   * @returns The last response.
-   */
-  getLastResponse() {
-    return this.lastResponse;
-  }
+  /****************************************************************************************
+
+    private stuff private stuff private stuff private stuff private stuff private stuff
+
+  *****************************************************************************************/
 
   /**
    * Displays debug information about the prompt.
@@ -692,38 +787,6 @@ export class OpenAIChatThread {
       if (completion_tokens !== undefined) this.threadCount.completion_tokens += completion_tokens;
       if (total_tokens !== undefined) this.threadCount.total_tokens += total_tokens;
     }
-  }
-
-  /**
-   * Retrieves the messages stored in the chat.
-   * @returns An array of ChatCompletionMessageParam objects representing the messages.
-   */
-  getMessages(): ChatCompletionMessageParam[] {
-    return this.messages;
-  }
-
-  /**
-   * Returns an Observable that emits an array of ChatCompletionMessageParam objects whenever there is a new message.
-   * @returns {Observable<ChatCompletionMessageParam[]>} The Observable that emits the array of ChatCompletionMessageParam objects.
-   */
-  getMessagesAsObservable(): Observable<ChatCompletionMessageParam[]> {
-    return this.messages$.asObservable();
-  }
-
-  /**
-   * Returns an Observable that emits the stream delta as a string.
-   * @returns {Observable<string>} An Observable that emits the stream delta as a string.
-   */
-  getStreamDeltaAsObservable(): Observable<string | undefined> {
-    return this.streamDelta$.asObservable();
-  }
-
-  /**
-   * Returns an Observable that emits the concatenated stream as a string.
-   * @returns An Observable that emits the concatenated stream as a string.
-   */
-  getStreamConcatedAsObservable(): Observable<string | undefined> {
-    return this.streamConcated$.asObservable();
   }
 }
 
@@ -749,6 +812,9 @@ export function makeChatTool(
   };
 }
 
+/**
+ * Represents a stricter definition of function parameters for chat functions - as FunctionParameters is too loose
+ */
 export interface StrictFuntionParameters {
   type: "function";
   function: {
