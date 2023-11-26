@@ -1,5 +1,17 @@
 import dotenv from "dotenv";
-import { OpenAIChatThread } from "./openai_chat";
+import fs from "fs";
+import path from "path";
+import readline from "readline";
+import { OpenAIChatThread, makeChatToolFunction } from "./openai_chat";
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+function askQuestion(query: string) {
+  return new Promise((resolve) => rl.question(query, (ans) => resolve(ans)));
+}
 
 dotenv.config();
 
@@ -22,85 +34,152 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
 }
 
 (async () => {
-  const newOpenAIthread = new OpenAIChatThread(OPENAI_API_KEY); // .runPrompt({ frequency_penalty: 0.5, presence_penalty: 0.5 });
+  const newOpenAIthread = new OpenAIChatThread(OPENAI_API_KEY);
 
-  const imageResult = await newOpenAIthread
-    .runImagePrompt("A painting of a person playing tennis", {
-      model: "dall-e-3",
-      response_format: "url",
-      style: "natural",
-    })
-    .then((res) => res.getLastResponseAsImageResult())
-    .then((sa) => console.log(sa));
+  if ((await askQuestion("Do you want to run Dall-e example (y/n) ")) === "y") {
+    await newOpenAIthread
+      .runImagePrompt("A painting of a person playing tennis", {
+        model: "dall-e-2",
+        response_format: "url",
+        style: "natural",
+      })
+      .then((res) => res.getLastResponseAsImageResult())
+      .then((sa) => console.log(sa));
+  }
 
+  if ((await askQuestion("Do you want to run prompt chat dialog example (y/n) ")) === "y") {
+    await newOpenAIthread
+      .setMessages([
+        {
+          role: "system",
+          content:
+            "You are a translator into German. The user will talk to you in English and you will answer in German",
+        },
+        {
+          role: "user",
+          content: "What do you think is the meaning of life?",
+        },
+      ])
+      .runPrompt()
+      .then(async (res) => {
+        console.log("Answer 1", await res.getLastResponseAsChatCompletionResult());
+        return res;
+      })
+      .then((res) => res.appendUserMessage("Thanks. How are you?"))
+      .then((ai) => ai.runPrompt())
+      .then(async (res) => {
+        console.log("Answer 2", await res.getLastResponseAsChatCompletionResult());
+        console.log("All messages", newOpenAIthread.getMessages());
+        return res;
+      });
+  }
+
+  if ((await askQuestion("Do you want to run stream chat example (y/n) ")) === "y") {
+    if ((await askQuestion("Do you want to abort the stream after 1.5secs (y/n) ")) === "y")
+      setTimeout(() => {
+        console.log("Aborting stream");
+        newOpenAIthread.abortStream();
+      }, 1500);
+
+    const subscription = newOpenAIthread.getStreamConcatedAsObservable().subscribe((res) => {
+      console.log("Stream response", res);
+    });
+
+    await newOpenAIthread
+      .setModel("gpt-3.5-turbo-1106")
+      .setDebug(false)
+      .setMaxTokens(30)
+      .setMessages([
+        {
+          role: "system",
+          content:
+            "You are a translator into German. The user will give you a text in English  and you will provide the translation in German",
+        },
+        {
+          role: "user",
+          content: "Give a 100 word poem in German.",
+        },
+      ])
+      .runPromptStream()
+      .then((res) => {
+        subscription.unsubscribe();
+        console.log("Last response", res.getLastResponseAsChatCompletionResult());
+      });
+  }
+
+  if ((await askQuestion("Do you want to run tool chat example (y/n) ")) === "y") {
+    const getCurrentWeatherChatTool = makeChatToolFunction(
+      "get_current_weather",
+      "Get the current weather in a given location",
+      {
+        type: "object",
+        properties: {
+          location: {
+            type: "string",
+            description: "The city and state, e.g. San Francisco, CA",
+          },
+          unit: { type: "string", enum: ["celsius", "fahrenheit"] },
+        },
+        required: ["location"],
+      }
+    );
+
+    await newOpenAIthread
+      .setModel("gpt-3.5-turbo-1106")
+      .setDebug(true)
+      .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
+      .addToolWithFunction(getCurrentWeatherChatTool, getCurrentWeather)
+      .runPrompt()
+      .then((res) => {
+        console.log("Intermediate response", res.getLastResponseAsChatCompletionResult());
+        console.log("All messages", res.getMessages());
+        // we need to do a second run because tools need to run
+        return res.runPrompt();
+      })
+      .then((res) => {
+        console.log("Last response", res.getLastResponseAsChatCompletionResult());
+        console.log("All messages", res.getMessages());
+        return res;
+      });
+  }
+
+  if ((await askQuestion("Do you want to run vision example (y/n) ")) === "y") {
+    await newOpenAIthread
+      .setMaxTokens(300)
+      .setMessages([])
+      .runVisionPrompt(
+        "What do I see on this picture?",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+      )
+      .then((res) => {
+        console.log("Last response", res.getLastResponseAsVisionResult());
+        console.log("Message", res.getMessages());
+        return res;
+      });
+  }
+
+  if ((await askQuestion("Do you want to run embedding example (y/n) ")) === "y") {
+    await newOpenAIthread.runEmbeddingPrompt("What is the meaning of life?").then((res) => {
+      console.log("Last response", res.getLastResponseAsEmbbedingResult());
+      return res;
+    });
+  }
+
+  if ((await askQuestion("Do you want to run speech example (y/n) ")) === "y") {
+    const speechFile = path.resolve("./speech.mp3");
+    const line = await askQuestion("Enter a sentence to convert to speech ");
+    let res = await newOpenAIthread.runSpeechPrompt(line as string);
+    await fs.promises.writeFile(speechFile, await res.getLastResponseAsSpeechBufferResult());
+
+    console.log("File written to ./speech.mp3");
+  }
+
+  if ((await askQuestion("Do you want to run moderation example (y/n) ")) === "y") {
+    const line = await askQuestion("Enter a sentence to moderate: ");
+    let res = await newOpenAIthread.runModerationPrompt(line as string);
+    console.log("Moderation result", res.getLastResponseAsModerationResult());
+  }
+
+  rl.close();
   return;
-
-  // setTimeout(() => {
-  //   // newOpenAIthread.abortStream();
-  // }, 1500);
-  // let res = await newOpenAIthread
-  //   .setModel("gpt-3.5-turbo-1106")
-  //   .setDebug(true)
-  //   .setMaxTokens(30)
-  //   .setMessages([
-  //     {
-  //       role: "system",
-  //       content:
-  //         "You are a translator into German. The user will give you a text in English  and you will provide the translation in German",
-  //     },
-  //     {
-  //       role: "user",
-  //       content: "Give a 100 word poem in German.",
-  //     },
-  //   ])
-  //   .runPromptStream();
-  // console.log(JSON.stringify(res, null, 2), JSON.stringify(newOpenAIthread.getMessages(), null, 2));
-  // let resa = await newOpenAIthread
-  //   .appendMessage({
-  //     role: "user",
-  //     content: "I am fine, thank you. How are you?",
-  //   })
-  //   .runPromptWithMessageResponse();
-  // console.log(resa);
-  // console.log("All messages", newOpenAIthread.getMessages());
-  // const chatTool = makeChatTool(
-  //   "get_current_weather",
-  //   "Get the current weather in a given location",
-  //   {
-  //     type: "object",
-  //     properties: {
-  //       location: {
-  //         type: "string",
-  //         description: "The city and state, e.g. San Francisco, CA",
-  //       },
-  //       unit: { type: "string", enum: ["celsius", "fahrenheit"] },
-  //     },
-  //     required: ["location"],
-  //   }
-  // );
-  // let thread2 = await newOpenAIthread
-  //   .setModel("gpt-3.5-turbo-1106")
-  //   .setDebug(true)
-  //   .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
-  //   .addToolWithFunction(chatTool, getCurrentWeather);
-  // let res2 = await thread2.runPrompt();
-  // console.log("addToolWithFunction res", JSON.stringify(res2, null, 2));
-  // console.log("Messages", JSON.stringify(thread2.getMessages(), null, 2));
-  // let res3 = await thread2.runPrompt();
-  // console.log("Second run with same thread", JSON.stringify(res3, null, 2));
-  // let res4 = await thread2
-  //   .setMaxTokens(300)
-  //   .runVisionPrompt(
-  //     "What do I see on this picture?",
-  //     "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
-  //   );
-  // console.log("runVisionVisionPrompt thread", JSON.stringify(res4, null, 2));
-  // console.log("Messages", JSON.stringify(thread2.getMessages(), null, 2));
-  // let res5 = await thread2.runEmbeddingPrompt("What is the meaning of life?");
-  // console.log("runembbedings", JSON.stringify(res5.length, null, 2));
-  // const speechFile = path.resolve("./speech.mp3");
-  // let res6 = await thread2.runSpeechPromptAsBuffer("What is the meaning of life?");
-  // await fs.promises.writeFile(speechFile, res6);
-  // let res7 = await thread2.runModerationPromptAsBoolean("I am an idiot");
-  // console.log("runModerationPrompt", JSON.stringify(res7, null, 2));
 })();

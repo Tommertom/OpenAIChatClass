@@ -434,76 +434,69 @@ export class OpenAIChatThread {
    * Runs the prompt and returns a promise that resolves to the chat completion response.
    * @returns A promise that resolves to a `OpenAI.Chat.Completions.ChatCompletion` object.
    */
-  runPrompt(modelOptions?: CompletionCreateParamsBaseOptionals) {
-    return this.openai.chat.completions
-      .create({
-        ...modelOptions,
-        messages: this.messages,
-        model: this.model,
-        stream: false,
-        temperature: this.temperature,
-        response_format: { type: this.json_mode ? "json_object" : "text" },
-        tools: this.tools.length > 0 ? this.tools : undefined,
-        max_tokens: this.max_tokens,
-      })
-      .then((response) => {
-        // add this completion to the list of received completions
-        this.receivedCompletions.push(response);
-        if (this.debug) console.log("receivedCompletions length", this.receivedCompletions.length);
+  async runPrompt(modelOptions?: CompletionCreateParamsBaseOptionals) {
+    const response = await this.openai.chat.completions.create({
+      ...modelOptions,
+      messages: this.messages,
+      model: this.model,
+      stream: false,
+      temperature: this.temperature,
+      response_format: { type: this.json_mode ? "json_object" : "text" },
+      tools: this.tools.length > 0 ? this.tools : undefined,
+      max_tokens: this.max_tokens,
+    });
 
-        // let's add the assistant response to the messages
-        response.choices.forEach(async (choice) => {
-          this._addmessages([choice.message]);
+    // add this completion to the list of received completions
+    this.receivedCompletions.push(response);
+    if (this.debug) console.log("receivedCompletions length", this.receivedCompletions.length);
 
-          // extend the messagethreath with the tool calls
-          const responseMessage = choice.message;
-          const toolCalls = responseMessage.tool_calls;
-          if (toolCalls !== undefined) {
-            if (this.debug) console.log("Tools to call - ", toolCalls);
+    // let's add the assistant response to the messages
+    response.choices.forEach(async (choice) => {
+      this._addmessages([choice.message]);
 
-            this.threadCount.tool_calls += toolCalls.length;
+      // extend the messagethreath with the tool calls
+      const responseMessage = choice.message;
+      const toolCalls = responseMessage.tool_calls;
+      if (toolCalls !== undefined) {
+        if (this.debug) console.log("Tools to call - ", toolCalls);
 
-            // taken from https://platform.openai.com/docs/guides/function-calling
-            for (const toolCall of toolCalls) {
-              const functionName = toolCall.function.name;
-              const functionToCall = this.toolFunctionmap[functionName];
-              const functionArgs = JSON.parse(toolCall.function.arguments);
+        this.threadCount.tool_calls += toolCalls.length;
 
-              if (functionToCall === undefined)
-                throw new Error(`Function ${functionName} is not defined`);
+        // taken from https://platform.openai.com/docs/guides/function-calling
+        for (const toolCall of toolCalls) {
+          const functionName = toolCall.function.name;
+          const functionToCall = this.toolFunctionmap[functionName];
+          const functionArgs = JSON.parse(toolCall.function.arguments);
 
-              if (functionToCall !== undefined) {
-                if (this.debug)
-                  console.log("Toolcall - calling function", functionName, functionArgs);
-                const functionResponse = await functionToCall(
-                  functionArgs.location,
-                  functionArgs.unit
-                );
+          if (functionToCall === undefined)
+            throw new Error(`Function ${functionName} is not defined`);
 
-                if (this.debug)
-                  console.log("Toolcall - function result", functionName, functionArgs);
+          if (functionToCall !== undefined) {
+            if (this.debug) console.log("Toolcall - calling function", functionName, functionArgs);
+            const functionResponse = await functionToCall(functionArgs.location, functionArgs.unit);
 
-                this.messages.push({
-                  tool_call_id: toolCall.id,
-                  role: "tool",
-                  //@ts-ignore
-                  name: functionName,
-                  content: functionResponse,
-                });
-              }
-            }
+            if (this.debug) console.log("Toolcall - function result", functionName, functionArgs);
+
+            this.messages.push({
+              tool_call_id: toolCall.id,
+              role: "tool",
+              //@ts-ignore
+              name: functionName,
+              content: functionResponse,
+            });
           }
-        });
+        }
+      }
+    });
 
-        // update the counters
-        this._updateThreadCount(response);
+    // update the counters
+    this._updateThreadCount(response);
 
-        // debug output
-        if (this.debug) this._showPromptDebugInfo();
+    // debug output
+    if (this.debug) this._showPromptDebugInfo();
 
-        this.lastResponse = response;
-        return this;
-      });
+    this.lastResponse = response;
+    return this;
   }
 
   /**
