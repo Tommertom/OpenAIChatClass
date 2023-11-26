@@ -16,7 +16,7 @@ type SupportedOpenAIModels = "gpt-3.5-turbo" | "gpt-4-1106-preview" | "gpt-3.5-t
 /**
  * Represents the count of tokens and tool calls in an OpenAI chat thread.
  */
-export interface OpenAIChatThreadCount {
+export interface OpenAIWrapperClassCount {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
@@ -37,7 +37,7 @@ export interface ImageGenerateParamsOptionals extends Omit<ImageGenerateParams, 
 /**
  * Represents a chat thread for interacting with the OpenAI chat API.
  */
-export class OpenAIChatThread {
+export class OpenAIWrapperClass {
   // the open AI interfaces
   private openai: OpenAI;
   private model: SupportedOpenAIModels = "gpt-3.5-turbo";
@@ -51,7 +51,7 @@ export class OpenAIChatThread {
   private streamAbortController: AbortController | undefined = undefined;
 
   // internal thread values
-  private threadCount: OpenAIChatThreadCount = {
+  private threadCount: OpenAIWrapperClassCount = {
     prompt_tokens: 0,
     completion_tokens: 0,
     total_tokens: 0,
@@ -84,7 +84,7 @@ export class OpenAIChatThread {
 
   /****************************************************************************************
 
-    All configuration options for the OpenAIChatThread
+    All configuration options for the OpenAIWrapperClass
 
   *****************************************************************************************/
 
@@ -94,33 +94,33 @@ export class OpenAIChatThread {
   }
 
   /**
-   * Sets the model for the OpenAIChatThread.
+   * Sets the model for the OpenAIWrapperClass.
    * @param model The supported OpenAI model.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setModel(model: SupportedOpenAIModels): OpenAIChatThread {
+  setModel(model: SupportedOpenAIModels): OpenAIWrapperClass {
     this.model = model;
 
     return this;
   }
 
   /**
-   * Sets the debug mode for the OpenAIChatThread.
+   * Sets the debug mode for the OpenAIWrapperClass.
    * @param debug - A boolean value indicating whether debug mode should be enabled or disabled.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setDebug(debug: boolean): OpenAIChatThread {
+  setDebug(debug: boolean): OpenAIWrapperClass {
     this.debug = debug;
 
     return this;
   }
 
   /**
-   * Sets the JSON mode for the OpenAIChatThread.
+   * Sets the JSON mode for the OpenAIWrapperClass.
    * @param json_mode - A boolean value indicating whether to enable JSON mode.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setJsonMode(json_mode: boolean): OpenAIChatThread {
+  setJsonMode(json_mode: boolean): OpenAIWrapperClass {
     this.json_mode = json_mode;
 
     return this;
@@ -129,20 +129,20 @@ export class OpenAIChatThread {
   /**
    * Sets the temperature for generating responses in the OpenAI chat thread.
    * @param temperature The temperature value to set.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setTemperature(temperature: number): OpenAIChatThread {
+  setTemperature(temperature: number): OpenAIWrapperClass {
     this.temperature = temperature;
 
     return this;
   }
 
   /**
-   * Sets the timeout for the OpenAIChatThread.
+   * Sets the timeout for the OpenAIWrapperClass.
    * @param timeout The timeout value in milliseconds.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setTimeout(timeout: number): OpenAIChatThread {
+  setTimeout(timeout: number): OpenAIWrapperClass {
     this.timeout = timeout;
 
     return this;
@@ -152,21 +152,21 @@ export class OpenAIChatThread {
    * Sets the maximum number of tokens to generate in the response.
    *
    * @param max_tokens The maximum number of tokens.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setMaxTokens(max_tokens: number): OpenAIChatThread {
+  setMaxTokens(max_tokens: number): OpenAIWrapperClass {
     this.max_tokens = max_tokens;
 
     return this;
   }
 
   /**
-   * Sets the functions for the OpenAIChatThread.
+   * Sets the functions for the OpenAIWrapperClass.
    *
    * @param functions - An array of ChatCompletionTool objects or FunctionDefinition objects.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setTools(functions: ChatCompletionTool[] | FunctionDefinition[]): OpenAIChatThread {
+  setTools(functions: ChatCompletionTool[] | FunctionDefinition[]): OpenAIWrapperClass {
     this.tools = [];
     functions.forEach((fn) => {
       this.addTool(fn);
@@ -176,14 +176,14 @@ export class OpenAIChatThread {
   }
 
   /**
-   * Appends a function to the list of functions in the OpenAIChatThread
+   * Appends a function to the list of functions in the OpenAIWrapperClass
    *
    * @see https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
    *
    * @param chatToolFunction - The function to append.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  addTool(chatToolFunction: ChatCompletionTool | FunctionDefinition): OpenAIChatThread {
+  addTool(chatToolFunction: ChatCompletionTool | FunctionDefinition): OpenAIWrapperClass {
     // if the function is a FunctionDefinition, we need to convert it to a ChatCompletionTool
     if (!hasOwn(chatToolFunction, "type")) {
       this.tools.push({
@@ -205,12 +205,12 @@ export class OpenAIChatThread {
    *
    * @param chatToolFunction - The function definition as ChatCompletionTool or FunctionDefinition.
    * @param toolFunction - The tool function to associate with the function definition.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
   addToolWithFunction(
     chatToolFunction: ChatCompletionTool | FunctionDefinition,
     toolFunctionInJS: Function
-  ): OpenAIChatThread {
+  ): OpenAIWrapperClass {
     this.addTool(chatToolFunction);
 
     // get the name of the function to associate with the tool function in the toolFunctionmap
@@ -226,25 +226,25 @@ export class OpenAIChatThread {
   }
 
   /**
-   * Sets the tool function map for the OpenAIChatThread.
+   * Sets the tool function map for the OpenAIWrapperClass.
    *
    * @param toolFunctionmap - The tool function map to set.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setToolFunctionMap(toolFunctionmap: Record<string, Function>): OpenAIChatThread {
+  setToolFunctionMap(toolFunctionmap: Record<string, Function>): OpenAIWrapperClass {
     this.toolFunctionmap = toolFunctionmap;
 
     return this;
   }
 
   /**
-   * Sets a tool function for the OpenAIChatThread.
+   * Sets a tool function for the OpenAIWrapperClass.
    *
    * @param name - The name of the tool function.
    * @param fn - The tool function to be set.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setToolFunction(name: string, toolFunctionInJS: Function): OpenAIChatThread {
+  setToolFunction(name: string, toolFunctionInJS: Function): OpenAIWrapperClass {
     this.toolFunctionmap[name] = toolFunctionInJS;
 
     return this;
@@ -266,12 +266,12 @@ export class OpenAIChatThread {
   *****************************************************************************************/
 
   /**
-   * Sets the messages for the OpenAIChatThread.
+   * Sets the messages for the OpenAIWrapperClass.
    *
    * @param messages - An array of ChatCompletionMessageParam objects representing the messages to be set.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  setMessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
+  setMessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
     this.messages = [];
     this._addmessages(messages);
 
@@ -279,7 +279,7 @@ export class OpenAIChatThread {
   }
 
   // private methods
-  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
+  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
     this.messages = this.messages.concat(messages);
     this.messages$.next(messages);
 
@@ -290,21 +290,21 @@ export class OpenAIChatThread {
    * Appends a message to the chat conversation and run the prompt.
    *
    * @param message - The message to append.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  appendMessage(message: ChatCompletionMessageParam): OpenAIChatThread {
+  appendMessage(message: ChatCompletionMessageParam): OpenAIWrapperClass {
     this._addmessages([message]);
 
     return this;
   }
 
   /**
-   * Appends a user message to the OpenAIChatThread.
+   * Appends a user message to the OpenAIWrapperClass.
    *
    * @param message - The message to be appended.
-   * @returns The updated OpenAIChatThread instance.
+   * @returns The updated OpenAIWrapperClass instance.
    */
-  appendUserMessage(message: string): OpenAIChatThread {
+  appendUserMessage(message: string): OpenAIWrapperClass {
     this._addmessages([{ content: message, role: "user" }]);
 
     return this;

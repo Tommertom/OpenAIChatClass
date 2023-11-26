@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import readline from "readline";
-import { OpenAIChatThread, makeChatToolFunction } from "./openai_chat";
+import { OpenAIWrapperClass, makeChatToolFunction } from "./openAIwrapper.class";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -33,9 +33,13 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
   }
 }
 
+/*
+Main example file
+*/
 (async () => {
-  const newOpenAIthread = new OpenAIChatThread(OPENAI_API_KEY);
+  const newOpenAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
 
+  // Example of how to use Dall-e
   if ((await askQuestion("Do you want to run Dall-e example (y/n) ")) === "y") {
     await newOpenAIthread
       .runImagePrompt("A painting of a person playing tennis", {
@@ -44,9 +48,10 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
         style: "natural",
       })
       .then((res) => res.getLastResponseAsImageResult())
-      .then((sa) => console.log(sa));
+      .then((res) => console.log(res));
   }
 
+  // Example of how to base chat API
   if ((await askQuestion("Do you want to run prompt chat dialog example (y/n) ")) === "y") {
     await newOpenAIthread
       .setMessages([
@@ -74,6 +79,7 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
       });
   }
 
+  // streaming chat example
   if ((await askQuestion("Do you want to run stream chat example (y/n) ")) === "y") {
     if ((await askQuestion("Do you want to abort the stream after 1.5secs (y/n) ")) === "y")
       setTimeout(() => {
@@ -107,6 +113,7 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
       });
   }
 
+  // using tools
   if ((await askQuestion("Do you want to run tool chat example (y/n) ")) === "y") {
     const getCurrentWeatherChatTool = makeChatToolFunction(
       "get_current_weather",
@@ -143,6 +150,7 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
       });
   }
 
+  // vision - identification of objects in an image
   if ((await askQuestion("Do you want to run vision example (y/n) ")) === "y") {
     await newOpenAIthread
       .setMaxTokens(300)
@@ -158,6 +166,7 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
       });
   }
 
+  // creating embeddings
   if ((await askQuestion("Do you want to run embedding example (y/n) ")) === "y") {
     await newOpenAIthread.runEmbeddingPrompt("What is the meaning of life?").then((res) => {
       console.log("Last response", res.getLastResponseAsEmbbedingResult());
@@ -165,6 +174,7 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
     });
   }
 
+  // generating speech
   if ((await askQuestion("Do you want to run speech example (y/n) ")) === "y") {
     const speechFile = path.resolve("./speech.mp3");
     const line = await askQuestion("Enter a sentence to convert to speech ");
@@ -174,6 +184,7 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
     console.log("File written to ./speech.mp3");
   }
 
+  // moderation example
   if ((await askQuestion("Do you want to run moderation example (y/n) ")) === "y") {
     const line = await askQuestion("Enter a sentence to moderate: ");
     let res = await newOpenAIthread.runModerationPrompt(line as string);
