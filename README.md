@@ -80,4 +80,4 @@ Moderates content based on user input.
 
 # Documentation
 
-See link [docs](docs/index.html)
+See link [Documentation](./docs/index.html)
