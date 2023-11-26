@@ -5,6 +5,7 @@ import {
   ChatCompletionTool,
   FunctionDefinition,
   FunctionParameters,
+  ImageGenerateParams,
 } from "openai/resources";
 import { CompletionCreateParamsBase } from "openai/resources/completions";
 import { BehaviorSubject, Observable } from "rxjs";
@@ -22,6 +23,8 @@ export interface OpenAIChatThreadCount {
 
 export interface CompletionCreateParamsBaseOptionals
   extends Omit<CompletionCreateParamsBase, "prompt" | "model"> {}
+
+export interface ImageGenerateParamsOptionsals extends Omit<ImageGenerateParams, "prompt"> {}
 
 export class OpenAIChatThread {
   // the open AI interfaces
@@ -48,14 +51,25 @@ export class OpenAIChatThread {
   private receivedCompletions: Array<OpenAI.Chat.Completions.ChatCompletion> = [];
   private toolFunctionmap: Record<string, Function> = {};
   private debug: boolean = false;
+  private lastResponse:
+    | OpenAI.Images.ImagesResponse
+    | Response
+    | OpenAI.Moderations.Moderation
+    | number[]
+    | OpenAI.Chat.Completions.ChatCompletion
+    | undefined = undefined;
 
   // the RXJS goodies
   private messages$: BehaviorSubject<ChatCompletionMessageParam[]> = new BehaviorSubject<
     ChatCompletionMessageParam[]
   >([]);
 
-  private streamDelta$: BehaviorSubject<string> = new BehaviorSubject<string>("");
-  private streamConcated$: BehaviorSubject<string> = new BehaviorSubject<string>("");
+  private streamDelta$: BehaviorSubject<string | undefined> = new BehaviorSubject<
+    string | undefined
+  >(undefined);
+  private streamConcated$: BehaviorSubject<string | undefined> = new BehaviorSubject<
+    string | undefined
+  >(undefined);
 
   constructor(apiKey: string, secret?: string) {
     if (apiKey === undefined) throw new Error("API Key is required");
@@ -69,6 +83,7 @@ export class OpenAIChatThread {
    */
   setModel(model: SupportedOpenAIModels): OpenAIChatThread {
     this.model = model;
+
     return this;
   }
 
@@ -79,6 +94,7 @@ export class OpenAIChatThread {
    */
   setDebug(debug: boolean): OpenAIChatThread {
     this.debug = debug;
+
     return this;
   }
 
@@ -89,6 +105,7 @@ export class OpenAIChatThread {
    */
   setJsonMode(json_mode: boolean): OpenAIChatThread {
     this.json_mode = json_mode;
+
     return this;
   }
 
@@ -99,6 +116,7 @@ export class OpenAIChatThread {
    */
   setTemperature(temperature: number): OpenAIChatThread {
     this.temperature = temperature;
+
     return this;
   }
 
@@ -109,6 +127,7 @@ export class OpenAIChatThread {
    */
   setTimeout(timeout: number): OpenAIChatThread {
     this.timeout = timeout;
+
     return this;
   }
 
@@ -120,6 +139,7 @@ export class OpenAIChatThread {
    */
   setMaxTokens(max_tokens: number): OpenAIChatThread {
     this.max_tokens = max_tokens;
+
     return this;
   }
 
@@ -132,6 +152,7 @@ export class OpenAIChatThread {
   setMessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
     this.messages = [];
     this._addmessages(messages);
+
     return this;
   }
 
@@ -139,6 +160,7 @@ export class OpenAIChatThread {
   private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIChatThread {
     this.messages = this.messages.concat(messages);
     this.messages$.next(messages);
+
     return this;
   }
 
@@ -150,6 +172,7 @@ export class OpenAIChatThread {
    */
   appendMessage(message: ChatCompletionMessageParam): OpenAIChatThread {
     this._addmessages([message]);
+
     return this;
   }
 
@@ -161,6 +184,7 @@ export class OpenAIChatThread {
    */
   appendUserMessage(message: string): OpenAIChatThread {
     this._addmessages([{ content: message, role: "user" }]);
+
     return this;
   }
 
@@ -175,13 +199,16 @@ export class OpenAIChatThread {
     functions.forEach((fn) => {
       this.addTool(fn);
     });
+
     return this;
   }
 
   /**
-   * Appends a function to the list of functions in the OpenAIChatThread.
+   * Appends a function to the list of functions in the OpenAIChatThread
    *
-   * @param fn - The function to append.
+   * @see https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
+   *
+   * @param chatToolFunction - The function to append.
    * @returns The updated OpenAIChatThread instance.
    */
   addTool(chatToolFunction: ChatCompletionTool | FunctionDefinition): OpenAIChatThread {
@@ -202,7 +229,9 @@ export class OpenAIChatThread {
   /**
    * Adds a tool with a function definition and associates it with a tool function.
    *
-   * @param fn - The function definition as ChatCompletionTool or FunctionDefinition.
+   * @see https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
+   *
+   * @param chatToolFunction - The function definition as ChatCompletionTool or FunctionDefinition.
    * @param toolFunction - The tool function to associate with the function definition.
    * @returns The updated OpenAIChatThread instance.
    */
@@ -232,6 +261,7 @@ export class OpenAIChatThread {
    */
   setToolFunctionMap(toolFunctionmap: Record<string, Function>): OpenAIChatThread {
     this.toolFunctionmap = toolFunctionmap;
+
     return this;
   }
 
@@ -244,6 +274,7 @@ export class OpenAIChatThread {
    */
   setToolFunction(name: string, toolFunctionInJS: Function): OpenAIChatThread {
     this.toolFunctionmap[name] = toolFunctionInJS;
+
     return this;
   }
 
@@ -255,6 +286,7 @@ export class OpenAIChatThread {
    */
   runPromptStream(modelOptions?: CompletionCreateParamsBaseOptionals) {
     this.streamAbortController = undefined;
+
     return this.openai.chat.completions
       .create({
         ...modelOptions,
@@ -266,23 +298,35 @@ export class OpenAIChatThread {
         tools: undefined,
       })
       .then(async (response) => {
+        // reset the parameters for the stream
         let total = "";
-        this.streamConcated$.next(total);
+        this.streamConcated$.next("");
+        this.streamDelta$.next("");
         this.streamAbortController = response.controller;
 
+        // let's emit the stream delta and the concated stream
         for await (const chunk of response) {
           const chunk_as_string = chunk.choices[0]?.delta?.content || "";
-          this.streamDelta$.next(chunk_as_string);
           total = total + chunk_as_string;
+
+          this.streamDelta$.next(chunk_as_string);
           this.streamConcated$.next(total);
+
           if (this.debug) console.log("Stream output", chunk_as_string, total);
+        }
+
+        // if the stream is aborted, we need reset the last response and end
+        if (this.streamAbortController === undefined) {
+          this.lastResponse = undefined;
+
+          return this;
         }
 
         // add this completion to the list of received completion once ready and not aborted
         if (this.streamAbortController !== undefined) {
           if (this.debug) console.log("Stream completed", total);
 
-          this.receivedCompletions.push({
+          this.lastResponse = {
             id: "stream",
             choices: [
               {
@@ -303,7 +347,9 @@ export class OpenAIChatThread {
               prompt_tokens: 0,
               total_tokens: 0,
             },
-          });
+          };
+
+          this.receivedCompletions.push(this.lastResponse);
 
           this._addmessages([
             {
@@ -313,8 +359,14 @@ export class OpenAIChatThread {
           ]);
         }
 
+        // message that the stream is completed
+        this.streamDelta$.next(undefined);
+        this.streamConcated$.next(undefined);
+
+        // make sure we cannot abort the stream anymore
         this.streamAbortController = undefined;
-        return response;
+
+        return this;
       });
   }
 
@@ -334,9 +386,7 @@ export class OpenAIChatThread {
    * Runs the prompt and returns a promise that resolves to the chat completion response.
    * @returns A promise that resolves to a `OpenAI.Chat.Completions.ChatCompletion` object.
    */
-  runPrompt(
-    modelOptions?: CompletionCreateParamsBaseOptionals
-  ): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  runPrompt(modelOptions?: CompletionCreateParamsBaseOptionals) {
     return this.openai.chat.completions
       .create({
         ...modelOptions,
@@ -403,18 +453,25 @@ export class OpenAIChatThread {
         // debug output
         if (this.debug) this._showPromptDebugInfo();
 
-        return response;
+        this.lastResponse = response;
+        return this;
       });
   }
 
   /**
-   * Runs the prompt and returns the message response.
-   * @returns A promise that resolves to the message response.
+   * Returns the last response as a ChatCompletion object.
+   * @returns {OpenAI.Chat.Completions.ChatCompletion} The last response as a ChatCompletion object.
    */
-  runPromptWithMessageResponse(modelOptions?: CompletionCreateParamsBaseOptionals) {
-    return this.runPrompt(modelOptions).then((response) => {
-      return response.choices[0].message;
-    });
+  getLastResponseAsChatCompletionResult() {
+    return this.lastResponse as OpenAI.Chat.Completions.ChatCompletion;
+  }
+
+  /**
+   * Retrieves the last result as a message result.
+   * @returns The message result from the last chat completion result.
+   */
+  getLastResponseAsMessageResult() {
+    return this.getLastResponseAsChatCompletionResult().choices[0].message;
   }
 
   /**
@@ -464,8 +521,14 @@ export class OpenAIChatThread {
         // debug output
         if (this.debug) this._showPromptDebugInfo();
 
-        return response;
+        this.lastResponse = response;
+
+        return this;
       });
+  }
+
+  getLastResponseAsVisionResult() {
+    return this.lastResponse as OpenAI.Chat.Completions.ChatCompletion;
   }
 
   /**
@@ -478,8 +541,15 @@ export class OpenAIChatThread {
     return this.openai.embeddings.create({ input, model }).then((response) => {
       this._updateThreadCount(response as unknown as OpenAI.Chat.Completions.ChatCompletion);
       this._showPromptDebugInfo();
-      return response.data[0].embedding;
+
+      this.lastResponse = response.data[0].embedding;
+
+      return this;
     });
+  }
+
+  getLastResponseAsEmbbedingResult() {
+    return this.lastResponse as number[];
   }
 
   /**
@@ -512,29 +582,30 @@ export class OpenAIChatThread {
       })
       .then((response) => {
         if (this.debug) console.log("runSpeechPrompt response", response);
-        return response;
+
+        this.lastResponse = response;
+        //  return response;
+        return this;
       });
   }
 
   /**
-   * Runs a speech prompt and returns the response as an ArrayBuffer.
-   * @param input - The input prompt.
-   * @param model - The model to use for generating the response.
-   * @param voice - The voice to use for the speech.
-   * @param response_format - The format of the response audio (optional).
-   * @param speed - The speed of the response audio (optional).
-   * @returns A Promise that resolves to an ArrayBuffer containing the response audio.
+   * Retrieves the last response as a speech result.
+   *
+   * @returns The last response as a speech result.
    */
-  runSpeechPromptAsBuffer(
-    input: string,
-    model: (string & {}) | "tts-1" | "tts-1-hd" = "tts-1",
-    voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy",
-    response_format: "mp3" | "opus" | "aac" | "flac" = "mp3",
-    speed?: number
-  ) {
-    return this.runSpeechPrompt(input, model, voice, response_format, speed).then((response) => {
-      return response.arrayBuffer().then((arrayBuffer) => Buffer.from(arrayBuffer));
-    });
+  getLastResponseAsSpeechResult(): Response {
+    return this.lastResponse as Response;
+  }
+
+  /**
+   * Retrieves the last response as a speech buffer result.
+   * @returns A promise that resolves to a Buffer containing the speech data.
+   */
+  getLastResponseAsSpeechBufferResult(): Promise<Buffer> {
+    return (this.lastResponse as Response)
+      .arrayBuffer()
+      .then((arrayBuffer) => Buffer.from(arrayBuffer));
   }
 
   /**
@@ -545,8 +616,17 @@ export class OpenAIChatThread {
   runModerationPrompt(input: string) {
     return this.openai.moderations.create({ input }).then((response) => {
       if (this.debug) console.log("runModerationPrompt response", response);
-      return response.results[0];
+      this.lastResponse = response.results[0];
+      return this;
     });
+  }
+
+  /**
+   * Retrieves the last response as a Moderation result.
+   * @returns The last response as a Moderation object.
+   */
+  getLastResponseAsModerationResult() {
+    return this.lastResponse as OpenAI.Moderations.Moderation;
   }
 
   /**
@@ -554,10 +634,42 @@ export class OpenAIChatThread {
    * @param input - The input string to be checked for moderation.
    * @returns A promise that resolves to a boolean indicating whether the input was flagged.
    */
-  runModerationPromptAsBoolean(input: string) {
-    return this.runModerationPrompt(input).then((response) => {
-      return response.flagged;
+  getLastResponseAsModerationBooleanResult() {
+    const response = this.getLastResponseAsModerationResult();
+    return response.flagged;
+  }
+
+  /**
+   * Runs the image prompt generation using the OpenAI API.
+   *
+   * @param prompt - The prompt for generating the image.
+   * @param modelOptions - Optional parameters for the image generation.
+   * @returns A Promise that resolves to the instance of the OpenAIChat class.
+   */
+  runImagePrompt(prompt: string, modelOptions: ImageGenerateParamsOptionsals) {
+    return this.openai.images.generate({ ...modelOptions, prompt }).then((response) => {
+      if (this.debug) console.log("runImagePrompt response", response);
+
+      this.lastResponse = response;
+      return this;
     });
+  }
+
+  /**
+   * Retrieves the URL of the last response as an image result.
+   * @returns The URL of the last response as an image result, or undefined if there is no last response or the URL is not available.
+   */
+  getLastResponseAsImageResult() {
+    return (this.lastResponse as OpenAI.Images.ImagesResponse)?.data[0];
+  }
+
+  /**
+   * Retrieves the last response received.
+   *
+   * @returns The last response.
+   */
+  getLastResponse() {
+    return this.lastResponse;
   }
 
   /**
@@ -602,7 +714,7 @@ export class OpenAIChatThread {
    * Returns an Observable that emits the stream delta as a string.
    * @returns {Observable<string>} An Observable that emits the stream delta as a string.
    */
-  getStreamDeltaAsObservable(): Observable<string> {
+  getStreamDeltaAsObservable(): Observable<string | undefined> {
     return this.streamDelta$.asObservable();
   }
 
@@ -610,7 +722,7 @@ export class OpenAIChatThread {
    * Returns an Observable that emits the concatenated stream as a string.
    * @returns An Observable that emits the concatenated stream as a string.
    */
-  getStreamConcatedAsObservable(): Observable<string> {
+  getStreamConcatedAsObservable(): Observable<string | undefined> {
     return this.streamConcated$.asObservable();
   }
 }
@@ -636,3 +748,77 @@ export function makeChatTool(
     },
   };
 }
+
+export interface StrictFuntionParameters {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: "object";
+      properties: {
+        [key: string]: {
+          type: string | "string" | "integer";
+          description: string;
+          enum?: string[];
+        };
+      };
+      required: string[];
+    };
+  };
+}
+
+/*
+
+ {
+        "type": "function",
+        "function": {
+            "name": "get_current_weather",
+            "description": "Get the current weather",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"],
+                        "description": "The temperature unit to use. Infer this from the users location.",
+                    },
+                },
+                "required": ["location", "format"],
+            },
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_n_day_weather_forecast",
+            "description": "Get an N-day weather forecast",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location": {
+                        "type": "string",
+                        "description": "The city and state, e.g. San Francisco, CA",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"],
+                        "description": "The temperature unit to use. Infer this from the users location.",
+                    },
+                    "num_days": {
+                        "type": "integer",
+                        "description": "The number of days to forecast",
+                    }
+                },
+                "required": ["location", "format", "num_days"]
+            },
+        }
+    },
+
+
+
+*/
