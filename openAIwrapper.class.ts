@@ -88,7 +88,7 @@ export class OpenAIWrapperClass {
 
   *****************************************************************************************/
 
-  constructor(apiKey: string, secret?: string) {
+  constructor(apiKey: string) {
     if (apiKey === undefined) throw new Error("API Key is required");
     this.openai = new OpenAI({ apiKey });
   }
@@ -278,14 +278,6 @@ export class OpenAIWrapperClass {
     return this;
   }
 
-  // private methods
-  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
-    this.messages = this.messages.concat(messages);
-    this.messages$.next(messages);
-
-    return this;
-  }
-
   /**
    * Appends a message to the chat conversation and run the prompt.
    *
@@ -306,6 +298,14 @@ export class OpenAIWrapperClass {
    */
   appendUserMessage(message: string): OpenAIWrapperClass {
     this._addmessages([{ content: message, role: "user" }]);
+
+    return this;
+  }
+
+  // private methods
+  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
+    this.messages = this.messages.concat(messages);
+    this.messages$.next(messages);
 
     return this;
   }

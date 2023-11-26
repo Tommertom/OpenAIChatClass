@@ -4,7 +4,7 @@ The `OpenAIWrapperClass` typescript class provides a convenient and flexible way
 
 One of the key benefits is the ease of configuration through fluent method chaining. Developers can set the OpenAI model, enable debug mode, specify parameters like temperature and timeout, and define custom tools for the chat. The class supports multiple OpenAI models, including the "gpt-3.5-turbo" and "gpt-4-1106-preview."
 
-Using the class involves creating an instance with an API key and, optionally, a secret. Developers can then chain method calls to configure the OpenAI model and other parameters. The runPrompt and runPromptStream methods initiate the generation process, providing flexibility for both synchronous and streaming scenarios.
+Using the class involves creating an instance with an API key. Developers can then chain method calls to configure the OpenAI model and other parameters. The runPrompt and runPromptStream methods initiate the generation process, providing flexibility for both synchronous and streaming scenarios.
 
 Here's an example of how to use the class to generate a chat completion:
 
