@@ -32,7 +32,7 @@ export interface CompletionCreateParamsBaseOptionals
 /**
  * Optional parameters for generating an image.
  */
-export interface ImageGenerateParamsOptionsals extends Omit<ImageGenerateParams, "prompt"> {}
+export interface ImageGenerateParamsOptionals extends Omit<ImageGenerateParams, "prompt"> {}
 
 /**
  * Represents a chat thread for interacting with the OpenAI chat API.
@@ -670,7 +670,7 @@ export class OpenAIChatThread {
         if (this.debug) console.log("runSpeechPrompt response", response);
 
         this.lastResponse = response;
-        //  return response;
+
         return this;
       });
   }
@@ -744,7 +744,7 @@ export class OpenAIChatThread {
    * @param modelOptions - Optional parameters for the image generation.
    * @returns A Promise that resolves to the instance of the OpenAIChat class.
    */
-  runImagePrompt(prompt: string, modelOptions: ImageGenerateParamsOptionsals) {
+  runImagePrompt(prompt: string, modelOptions: ImageGenerateParamsOptionals) {
     return this.openai.images.generate({ ...modelOptions, prompt }).then((response) => {
       if (this.debug) console.log("runImagePrompt response", response);
 
@@ -797,17 +797,17 @@ export class OpenAIChatThread {
  * @param paramaters - The parameters of the tool.
  * @returns A ChatCompletionTool object.
  */
-export function makeChatTool(
+export function makeChatToolFunction(
   name: string,
   description: string,
-  parameters: FunctionParameters
+  parameters: FunctionParameters | StrictFuntionParameters
 ): ChatCompletionTool {
   return {
     type: "function",
     function: {
       name,
       description,
-      parameters,
+      parameters: parameters as OpenAI.FunctionParameters,
     },
   };
 }
