@@ -37,11 +37,11 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
 Main example file
 */
 (async () => {
-  const newOpenAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
+  const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
 
   // Example of how to use Dall-e
   if ((await askQuestion("Do you want to run Dall-e example (y/n) ")) === "y") {
-    await newOpenAIthread
+    await openAIthread
       .runImagePrompt("A painting of a person playing tennis", {
         model: "dall-e-2",
         response_format: "url",
@@ -53,7 +53,7 @@ Main example file
 
   // Example of how to base chat API
   if ((await askQuestion("Do you want to run prompt chat dialog example (y/n) ")) === "y") {
-    await newOpenAIthread
+    await openAIthread
       .setMessages([
         {
           role: "system",
@@ -74,7 +74,7 @@ Main example file
       .then((ai) => ai.runPrompt())
       .then(async (res) => {
         console.log("Answer 2", await res.getLastResponseAsChatCompletionResult());
-        console.log("All messages", newOpenAIthread.getMessages());
+        console.log("All messages", openAIthread.getMessages());
         return res;
       });
   }
@@ -84,14 +84,10 @@ Main example file
     if ((await askQuestion("Do you want to abort the stream after 1.5secs (y/n) ")) === "y")
       setTimeout(() => {
         console.log("Aborting stream");
-        newOpenAIthread.abortStream();
+        openAIthread.abortStream();
       }, 1500);
 
-    // const subscription = newOpenAIthread.getStreamConcatedAsObservable().subscribe((res) => {
-    //   console.log("Stream response", res);
-    // });
-
-    await newOpenAIthread
+    await openAIthread
       .setModel("gpt-3.5-turbo-1106")
       .setDebug(false)
       .setMaxTokens(30)
@@ -132,7 +128,7 @@ Main example file
       }
     );
 
-    await newOpenAIthread
+    await openAIthread
       .setModel("gpt-3.5-turbo-1106")
       .setDebug(true)
       .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
@@ -153,7 +149,7 @@ Main example file
 
   // vision - identification of objects in an image
   if ((await askQuestion("Do you want to run vision example (y/n) ")) === "y") {
-    await newOpenAIthread
+    await openAIthread
       .setMaxTokens(300)
       .setMessages([])
       .runVisionPrompt(
@@ -169,7 +165,7 @@ Main example file
 
   // creating embeddings
   if ((await askQuestion("Do you want to run embedding example (y/n) ")) === "y") {
-    await newOpenAIthread.runEmbeddingPrompt("What is the meaning of life?").then((res) => {
+    await openAIthread.runEmbeddingPrompt("What is the meaning of life?").then((res) => {
       console.log("Last response", res.getLastResponseAsEmbbedingResult());
       return res;
     });
@@ -179,7 +175,7 @@ Main example file
   if ((await askQuestion("Do you want to run speech example (y/n) ")) === "y") {
     const speechFile = path.resolve("./speech.mp3");
     const line = await askQuestion("Enter a sentence to convert to speech ");
-    let res = await newOpenAIthread.runSpeechPrompt(line as string);
+    let res = await openAIthread.runSpeechPrompt(line as string);
     await fs.promises.writeFile(speechFile, await res.getLastResponseAsSpeechBufferResult());
 
     console.log("File written to ./speech.mp3");
@@ -188,7 +184,7 @@ Main example file
   // moderation example
   if ((await askQuestion("Do you want to run moderation example (y/n) ")) === "y") {
     const line = await askQuestion("Enter a sentence to moderate: ");
-    let res = await newOpenAIthread.runModerationPrompt(line as string);
+    let res = await openAIthread.runModerationPrompt(line as string);
     console.log("Moderation result", res.getLastResponseAsModerationResult());
   }
 
