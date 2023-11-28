@@ -88,6 +88,18 @@ export class OpenAIWrapperClass {
 
   *****************************************************************************************/
 
+
+    
+  /**
+   * Overrides the abortStream method from OpenAIWrapperClass to also complete the RXJS Subject.
+   */
+  override abortStream() {
+    super.abortStream();
+    this.subject.complete();
+  }
+}
+
+
   constructor(apiKey: string) {
     if (apiKey === undefined) throw new Error("API Key is required");
     this.openai = new OpenAI({ apiKey });

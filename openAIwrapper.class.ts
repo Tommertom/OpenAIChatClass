@@ -68,6 +68,7 @@ export class OpenAIWrapperClass {
     | number[]
     | OpenAI.Chat.Completions.ChatCompletion
     | undefined = undefined;
+  protected _needsToolRun: boolean = false;
 
   /****************************************************************************************
 
@@ -406,6 +407,8 @@ export class OpenAIWrapperClass {
    * @returns A promise that resolves to a `OpenAI.Chat.Completions.ChatCompletion` object.
    */
   async runPrompt(modelOptions?: CompletionCreateParamsBaseOptionals) {
+    this._needsToolRun = false;
+
     const response = await this.openai.chat.completions.create({
       ...modelOptions,
       messages: this.messages,
@@ -432,6 +435,8 @@ export class OpenAIWrapperClass {
         if (this.debug) console.log("Tools to call - ", toolCalls);
 
         this.threadCount.tool_calls += toolCalls.length;
+
+        this._needsToolRun = toolCalls.length > 0;
 
         // taken from https://platform.openai.com/docs/guides/function-calling
         for (const toolCall of toolCalls) {
@@ -468,6 +473,14 @@ export class OpenAIWrapperClass {
 
     this.lastResponse = response;
     return this;
+  }
+
+  /**
+   * Returns whether the prompt runner needs to run again in order to complete the tool calls
+   * @returns {boolean} True if the tool needs to be run, false otherwise.
+   */
+  needsToolRun() {
+    return this._needsToolRun;
   }
 
   /**

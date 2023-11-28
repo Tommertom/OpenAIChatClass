@@ -87,9 +87,9 @@ Main example file
         newOpenAIthread.abortStream();
       }, 1500);
 
-    const subscription = newOpenAIthread.getStreamConcatedAsObservable().subscribe((res) => {
-      console.log("Stream response", res);
-    });
+    // const subscription = newOpenAIthread.getStreamConcatedAsObservable().subscribe((res) => {
+    //   console.log("Stream response", res);
+    // });
 
     await newOpenAIthread
       .setModel("gpt-3.5-turbo-1106")
@@ -106,9 +106,10 @@ Main example file
           content: "Give a 100 word poem in German.",
         },
       ])
-      .runPromptStream()
+      .runPromptStream((delta) => {
+        console.log("Delta received", delta);
+      })
       .then((res) => {
-        subscription.unsubscribe();
         console.log("Last response", res.getLastResponseAsChatCompletionResult());
       });
   }

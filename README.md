@@ -11,26 +11,95 @@ Here's an example of how to use the class to generate a chat completion:
 ```
 const apiKey = "YOUR_OPENAI_API_KEY";
 const openaiWrapper = new OpenAIWrapperClass(apiKey);
+const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
 
-openaiWrapper
-  .setModel("gpt-3.5-turbo")
-  .setDebug(true)
-  .setTemperature(0.8)
-  .appendUserMessage("Tell me a joke.")
-  .appendMessage({ role: "assistant", content: "Why did the chicken cross the road?" })
-  .runPrompt({ seed: 100 })
-  .then(() => {
-    const lastResponse = openaiWrapper.getLastResponseAsMessageResult();
-    console.log("Assistant's response:", lastResponse.content);
-  })
-  .catch((error) => {
-    console.error("Error:", error.message);
-  });
+await openAIthread
+    .setMessages([
+      {
+        role: "system",
+        content:
+          "You are a translator into German. The user will talk to you in English and you will answer in German",
+      },
+      {
+        role: "user",
+        content: "What do you think is the meaning of life?",
+      },
+    ])
+    .runPrompt()
+    .then(async (ai) => {
+      console.log("Answer 1", await res.getLastResponseAsChatCompletionResult());
+      return ai;
+    })
+    .then((ai) => ai.appendUserMessage("Thanks. How are you?"))
+    .then((ai) => ai.runPrompt())
+    .then(async (ai) => {
+      console.log("Answer 2", await ai.getLastResponseAsChatCompletionResult());
+      console.log("All messages", ai.getMessages());
+      return ai;
+    });
 ```
 
 This example sets the model, enables debug mode, adds user and assistant messages to the chat, runs the prompt, and then retrieves and prints the assistant's response. The builder pattern facilitates a clean and expressive way to interact with OpenAI's API, making it suitable for a variety of natural language processing tasks.
 
 The setters for calling the API are present as builders and also as options to provide to the `runPrompt` (and other) methods.
+
+Another example - with helper functions to generate the tool (taken from the OpenAI docs)
+
+```
+
+function getCurrentWeather(location: string, unit = "fahrenheit") {
+  console.log("called getCurrentWeather", location, unit);
+
+  if (location.toLowerCase().includes("tokyo")) {
+    return JSON.stringify({ location: "Tokyo", temperature: "10", unit: "celsius" });
+  } else if (location.toLowerCase().includes("san francisco")) {
+    return JSON.stringify({ location: "San Francisco", temperature: "72", unit: "fahrenheit" });
+  } else if (location.toLowerCase().includes("paris")) {
+    return JSON.stringify({ location: "Paris", temperature: "22", unit: "fahrenheit" });
+  } else {
+    return JSON.stringify({ location, temperature: "unknown" });
+  }
+}
+
+
+ const getCurrentWeatherChatTool = makeChatToolFunction(
+      "get_current_weather",
+      "Get the current weather in a given location",
+      {
+        type: "object",
+        properties: {
+          location: {
+            type: "string",
+            description: "The city and state, e.g. San Francisco, CA",
+          },
+          unit: { type: "string", enum: ["celsius", "fahrenheit"] },
+        },
+        required: ["location"],
+      }
+    );
+
+const apiKey = "YOUR_OPENAI_API_KEY";
+const openaiWrapper = new OpenAIWrapperClass(apiKey);
+const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
+
+await openAIthread
+  .setModel("gpt-3.5-turbo-1106")
+  .setDebug(true)
+  .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
+  .addToolWithFunction(getCurrentWeatherChatTool, getCurrentWeather)
+  .runPrompt({})
+  .then((ai) => {
+    console.log("Intermediate response", ai.getLastResponseAsChatCompletionResult());
+    console.log("All messages", ai.getMessages());
+    // we need to do a second run because tools need to run
+    return ai.runPrompt();
+  })
+  .then((ai) => {
+    console.log("Last response", ai.getLastResponseAsChatCompletionResult());
+    console.log("All messages", ai.getMessages());
+    return ai;
+  });
+```
 
 ## Design objectives
 
