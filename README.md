@@ -10,7 +10,6 @@ Here's an example of how to use the class to generate a chat completion:
 
 ```
 const apiKey = "YOUR_OPENAI_API_KEY";
-const openaiWrapper = new OpenAIWrapperClass(apiKey);
 const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
 
 await openAIthread
@@ -47,6 +46,7 @@ Another example - with helper functions to generate the tool (taken from the Ope
 
 ```
 
+// the typescript function that in production should call the backend
 function getCurrentWeather(location: string, unit = "fahrenheit") {
   console.log("called getCurrentWeather", location, unit);
 
@@ -61,25 +61,24 @@ function getCurrentWeather(location: string, unit = "fahrenheit") {
   }
 }
 
-
- const getCurrentWeatherChatTool = makeChatToolFunction(
-      "get_current_weather",
-      "Get the current weather in a given location",
-      {
-        type: "object",
-        properties: {
-          location: {
-            type: "string",
-            description: "The city and state, e.g. San Francisco, CA",
-          },
-          unit: { type: "string", enum: ["celsius", "fahrenheit"] },
+// let's generate the JSON we need to include in the call to OpenAI
+const getCurrentWeatherChatTool = makeChatToolFunction(
+    "get_current_weather",
+    "Get the current weather in a given location",
+    {
+      type: "object",
+      properties: {
+        location: {
+          type: "string",
+          description: "The city and state, e.g. San Francisco, CA",
         },
-        required: ["location"],
-      }
-    );
+        unit: { type: "string", enum: ["celsius", "fahrenheit"] },
+      },
+      required: ["location"],
+    }
+  );
 
 const apiKey = "YOUR_OPENAI_API_KEY";
-const openaiWrapper = new OpenAIWrapperClass(apiKey);
 const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
 
 await openAIthread
@@ -92,6 +91,8 @@ await openAIthread
     console.log("Intermediate response", ai.getLastResponseAsChatCompletionResult());
     console.log("All messages", ai.getMessages());
     // we need to do a second run because tools need to run
+
+    if (ai.)
     return ai.runPrompt();
   })
   .then((ai) => {
@@ -99,6 +100,42 @@ await openAIthread
     console.log("All messages", ai.getMessages());
     return ai;
   });
+```
+
+And a stream example, where we use a callback to receive the intermediate results. And have a method to abort the stream if need be
+
+```
+
+const apiKey = "YOUR_OPENAI_API_KEY";
+const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
+
+
+     setTimeout(() => {
+        console.log("Aborting stream");
+        openAIthread.abortStream();
+      }, 1500);
+
+    await openAIthread
+      .setModel("gpt-3.5-turbo-1106")
+      .setDebug(false)
+      .setMaxTokens(30)
+      .setMessages([
+        {
+          role: "system",
+          content:
+            "You are a translator into German. The user will give you a text in English  and you will provide the translation in German",
+        },
+        {
+          role: "user",
+          content: "Give a 100 word poem in German.",
+        },
+      ])
+      .runPromptStream((delta) => {
+        console.log("Delta received", delta);
+      })
+      .then((res) => {
+        console.log("Last response", res.getLastResponseAsChatCompletionResult());
+      });
 ```
 
 ## Design objectives

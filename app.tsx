@@ -47,8 +47,8 @@ Main example file
         response_format: "url",
         style: "natural",
       })
-      .then((res) => res.getLastResponseAsImageResult())
-      .then((res) => console.log(res));
+      .then((ai) => ai.getLastResponseAsImageResult())
+      .then((response) => console.log(response));
   }
 
   // Example of how to base chat API
@@ -66,11 +66,11 @@ Main example file
         },
       ])
       .runPrompt()
-      .then(async (res) => {
-        console.log("Answer 1", await res.getLastResponseAsChatCompletionResult());
-        return res;
+      .then(async (ai) => {
+        console.log("Answer 1", await ai.getLastResponseAsChatCompletionResult());
+        return ai;
       })
-      .then((res) => res.appendUserMessage("Thanks. How are you?"))
+      .then((ai) => ai.appendUserMessage("Thanks. How are you?"))
       .then((ai) => ai.runPrompt())
       .then(async (res) => {
         console.log("Answer 2", await res.getLastResponseAsChatCompletionResult());
@@ -105,8 +105,8 @@ Main example file
       .runPromptStream((delta) => {
         console.log("Delta received", delta);
       })
-      .then((res) => {
-        console.log("Last response", res.getLastResponseAsChatCompletionResult());
+      .then((ai) => {
+        console.log("Last response", ai.getLastResponseAsChatCompletionResult());
       });
   }
 
@@ -134,16 +134,20 @@ Main example file
       .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
       .addToolWithFunction(getCurrentWeatherChatTool, getCurrentWeather)
       .runPrompt({})
-      .then((res) => {
-        console.log("Intermediate response", res.getLastResponseAsChatCompletionResult());
-        console.log("All messages", res.getMessages());
+      .then((ai) => {
+        console.log("Intermediate response", ai.getLastResponseAsChatCompletionResult());
+        console.log("All messages", ai.getMessages());
         // we need to do a second run because tools need to run
-        return res.runPrompt();
+
+        if (ai.needsToolRun()) return ai.runPrompt();
+        else return ai;
       })
-      .then((res) => {
-        console.log("Last response", res.getLastResponseAsChatCompletionResult());
-        console.log("All messages", res.getMessages());
-        return res;
+      .then((ai) => {
+        console.log("Last response", ai.getLastResponseAsChatCompletionResult());
+        console.log("All messages", ai.getMessages());
+
+        if (ai.needsToolRun()) console.log("Tool needs to run again, but we are not doing it here");
+        return ai;
       });
   }
 
@@ -156,18 +160,18 @@ Main example file
         "What do I see on this picture?",
         "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
       )
-      .then((res) => {
-        console.log("Last response", res.getLastResponseAsVisionResult());
-        console.log("Message", res.getMessages());
-        return res;
+      .then((ai) => {
+        console.log("Last response", ai.getLastResponseAsVisionResult());
+        console.log("Message", ai.getMessages());
+        return ai;
       });
   }
 
   // creating embeddings
   if ((await askQuestion("Do you want to run embedding example (y/n) ")) === "y") {
-    await openAIthread.runEmbeddingPrompt("What is the meaning of life?").then((res) => {
-      console.log("Last response", res.getLastResponseAsEmbbedingResult());
-      return res;
+    await openAIthread.runEmbeddingPrompt("What is the meaning of life?").then((ai) => {
+      console.log("Last response", ai.getLastResponseAsEmbbedingResult());
+      return ai;
     });
   }
 
@@ -175,8 +179,8 @@ Main example file
   if ((await askQuestion("Do you want to run speech example (y/n) ")) === "y") {
     const speechFile = path.resolve("./speech.mp3");
     const line = await askQuestion("Enter a sentence to convert to speech ");
-    let res = await openAIthread.runSpeechPrompt(line as string);
-    await fs.promises.writeFile(speechFile, await res.getLastResponseAsSpeechBufferResult());
+    let ai = await openAIthread.runSpeechPrompt(line as string);
+    await fs.promises.writeFile(speechFile, await ai.getLastResponseAsSpeechBufferResult());
 
     console.log("File written to ./speech.mp3");
   }
@@ -184,8 +188,8 @@ Main example file
   // moderation example
   if ((await askQuestion("Do you want to run moderation example (y/n) ")) === "y") {
     const line = await askQuestion("Enter a sentence to moderate: ");
-    let res = await openAIthread.runModerationPrompt(line as string);
-    console.log("Moderation result", res.getLastResponseAsModerationResult());
+    let ai = await openAIthread.runModerationPrompt(line as string);
+    console.log("Moderation result", ai.getLastResponseAsModerationResult());
   }
 
   rl.close();
