@@ -1,6 +1,6 @@
 # OpenAI chat class for typescript
 
-The `OpenAIWrapperClass` typescript class provides a convenient and flexible way for developers to interact with OpenAI's API using the builder pattern. This class abstracts the complexity of handling various OpenAI API functionalities, such as text generation, vision, embeddings, speech, moderation, and image prompts.
+The [`OpenAIWrapperClass`](./openAIwrapper.class.ts) typescript class provides a convenient and flexible way for developers to interact with OpenAI's API using the builder pattern. This class abstracts the complexity of handling various OpenAI API functionalities, such as text generation, vision, embeddings, speech, moderation, and image prompts.
 
 One of the key benefits is the ease of configuration through fluent method chaining. Developers can set the OpenAI model, enable debug mode, specify parameters like temperature and timeout, and define custom tools for the chat. The class supports multiple OpenAI models, including the "gpt-3.5-turbo" and "gpt-4-1106-preview."
 
@@ -10,7 +10,7 @@ Using the class involves creating an instance with an API key. Developers can th
 
 The class [`OpenAIWrapperRXJSClass`](./openAIwrapperRXJS.class.ts) adds RXJS capabilities to the message streams arising from API calls.
 
-The class [`OpenAIWrapperSignalClass`](./openAIwrapperRXJS.class.ts) uses `@angular/core` to provide a Signal implementation.
+The class [`OpenAIWrapperSignalClass`](./openAIwrapperAngularSignal.class.ts) uses `@angular/core` to provide a Signal implementation.
 
 ## Example code
 
