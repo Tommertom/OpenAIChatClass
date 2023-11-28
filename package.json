@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "start": "tsc && node dist/app.js",
-    "docs": "typedoc --out docs openai_chat.ts"
+    "docs": "typedoc --out docs *.ts"
   },
   "keywords": [],
   "author": "",

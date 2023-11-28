@@ -47,19 +47,29 @@ Another example - with helper functions to generate the tool (taken from the Ope
 ```
 
 // the typescript function that in production should call the backend
-function getCurrentWeather(location: string, unit = "fahrenheit") {
+function getCurrentWeather(location: string, unit: string = "fahrenheit"): string {
   console.log("called getCurrentWeather", location, unit);
 
-  if (location.toLowerCase().includes("tokyo")) {
-    return JSON.stringify({ location: "Tokyo", temperature: "10", unit: "celsius" });
-  } else if (location.toLowerCase().includes("san francisco")) {
-    return JSON.stringify({ location: "San Francisco", temperature: "72", unit: "fahrenheit" });
-  } else if (location.toLowerCase().includes("paris")) {
-    return JSON.stringify({ location: "Paris", temperature: "22", unit: "fahrenheit" });
-  } else {
-    return JSON.stringify({ location, temperature: "unknown" });
-  }
+  const weatherData: {
+    [key: string]: { location: string; temperature: string; unit: string };
+  } = {
+    tokyo: { location: "Tokyo", temperature: "10", unit: "celsius" },
+    "san francisco": {
+      location: "San Francisco",
+      temperature: "72",
+      unit: "fahrenheit",
+    },
+    paris: { location: "Paris", temperature: "22", unit: "fahrenheit" },
+  };
+
+  const normalizedLocation = location.toLowerCase();
+  const data = weatherData[normalizedLocation]
+    ? weatherData[normalizedLocation]
+    : { location, temperature: "unknown", unit: unit };
+
+  return JSON.stringify(data);
 }
+
 
 // let's generate the JSON we need to include in the call to OpenAI
 const getCurrentWeatherChatTool = makeChatToolFunction(
@@ -110,33 +120,36 @@ const apiKey = "YOUR_OPENAI_API_KEY";
 const openAIthread = new OpenAIWrapperClass(OPENAI_API_KEY);
 
 
-     setTimeout(() => {
-        console.log("Aborting stream");
-        openAIthread.abortStream();
-      }, 1500);
+setTimeout(() => {
+  console.log("Aborting stream");
+  openAIthread.abortStream();
+}, 1500);
 
-    await openAIthread
-      .setModel("gpt-3.5-turbo-1106")
-      .setDebug(false)
-      .setMaxTokens(30)
-      .setMessages([
-        {
-          role: "system",
-          content:
-            "You are a translator into German. The user will give you a text in English  and you will provide the translation in German",
-        },
-        {
-          role: "user",
-          content: "Give a 100 word poem in German.",
-        },
-      ])
-      .runPromptStream((delta) => {
-        console.log("Delta received", delta);
-      })
-      .then((res) => {
-        console.log("Last response", res.getLastResponseAsChatCompletionResult());
-      });
+await openAIthread
+  .setModel("gpt-3.5-turbo-1106")
+  .setDebug(false)
+  .setMaxTokens(30)
+  .setMessages([
+    {
+      role: "system",
+      content:
+        "You are a translator into German. The user will give you a text in English  and you will provide the translation in German",
+    },
+    {
+      role: "user",
+      content: "Give a 100 word poem in German.",
+    },
+  ])
+  .setStreamCallback((delta) => {
+    console.log("Delta received", delta);
+  })
+  .runPromptStream()
+  .then((res) => {
+    console.log("Last response", res.getLastResponseAsChatCompletionResult());
+  });
 ```
+
+The class `OpenAIWrapperRXJSClass` adds RXJS capabilities to the message streams arising from API calls.
 
 ## Design objectives
 
@@ -184,6 +197,6 @@ Moderates content based on user input.
 
 I have not implemented the Assistants API as it is in Beta. And it might require a total new class, as the APIs to Assistants are a group on their own.
 
-# Documentation
+## Documentation
 
 See link [Documentation](./docs)
