@@ -2,10 +2,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import readline from "readline";
-import {
-  OpenAIWrapperClass,
-  makeChatToolFunction,
-} from "./openAIwrapper.class";
+import { OpenAIWrapperClass, makeChatToolFunction } from "./openAIwrapper.class";
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -22,10 +19,7 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY as string;
 
 // Example dummy function hard coded to return the same weather
 // In production, this could be your backend API or an external API
-function getCurrentWeather(
-  location: string,
-  unit: string = "fahrenheit"
-): string {
+function getCurrentWeather(location: string, unit: string = "fahrenheit"): string {
   console.log("called getCurrentWeather", location, unit);
 
   const weatherData: {
@@ -67,11 +61,7 @@ Main example file
   }
 
   // Example of how to base chat API
-  if (
-    (await askQuestion(
-      "Do you want to run prompt chat dialog example (y/n) "
-    )) === "y"
-  ) {
+  if ((await askQuestion("Do you want to run prompt chat dialog example (y/n) ")) === "y") {
     await openAIthread
       .setMessages([
         {
@@ -86,33 +76,21 @@ Main example file
       ])
       .runPrompt()
       .then(async (ai) => {
-        console.log(
-          "Answer 1",
-          await ai.getLastResponseAsChatCompletionResult()
-        );
+        console.log("Answer 1", await ai.getLastResponseAsChatCompletionResult());
         return ai;
       })
       .then((ai) => ai.appendUserMessage("Thanks. How are you?"))
       .then((ai) => ai.runPrompt())
       .then(async (res) => {
-        console.log(
-          "Answer 2",
-          await res.getLastResponseAsChatCompletionResult()
-        );
+        console.log("Answer 2", await res.getLastResponseAsChatCompletionResult());
         console.log("All messages", openAIthread.getMessages());
         return res;
       });
   }
 
   // streaming chat example
-  if (
-    (await askQuestion("Do you want to run stream chat example (y/n) ")) === "y"
-  ) {
-    if (
-      (await askQuestion(
-        "Do you want to abort the stream after 1.5secs (y/n) "
-      )) === "y"
-    )
+  if ((await askQuestion("Do you want to run stream chat example (y/n) ")) === "y") {
+    if ((await askQuestion("Do you want to abort the stream after 1.5secs (y/n) ")) === "y")
       setTimeout(() => {
         console.log("Aborting stream");
         openAIthread.abortStream();
@@ -133,21 +111,17 @@ Main example file
           content: "Give a 100 word poem in German.",
         },
       ])
-      .runPromptStream((delta) => {
+      .setStreamCallback((delta) => {
         console.log("Delta received", delta);
       })
+      .runPromptStream()
       .then((ai) => {
-        console.log(
-          "Last response",
-          ai.getLastResponseAsChatCompletionResult()
-        );
+        console.log("Last response", ai.getLastResponseAsChatCompletionResult());
       });
   }
 
   // using tools
-  if (
-    (await askQuestion("Do you want to run tool chat example (y/n) ")) === "y"
-  ) {
+  if ((await askQuestion("Do you want to run tool chat example (y/n) ")) === "y") {
     const getCurrentWeatherChatTool = makeChatToolFunction(
       "get_current_weather",
       "Get the current weather in a given location",
@@ -167,16 +141,11 @@ Main example file
     await openAIthread
       .setModel("gpt-3.5-turbo-1106")
       .setDebug(true)
-      .setMessages([
-        { role: "user", content: "What's the weather like in San Francisco" },
-      ])
+      .setMessages([{ role: "user", content: "What's the weather like in San Francisco" }])
       .addToolWithFunction(getCurrentWeatherChatTool, getCurrentWeather)
       .runPrompt({})
       .then((ai) => {
-        console.log(
-          "Intermediate response",
-          ai.getLastResponseAsChatCompletionResult()
-        );
+        console.log("Intermediate response", ai.getLastResponseAsChatCompletionResult());
         console.log("All messages", ai.getMessages());
         // we need to do a second run because tools need to run
 
@@ -184,14 +153,10 @@ Main example file
         else return ai;
       })
       .then((ai) => {
-        console.log(
-          "Last response",
-          ai.getLastResponseAsChatCompletionResult()
-        );
+        console.log("Last response", ai.getLastResponseAsChatCompletionResult());
         console.log("All messages", ai.getMessages());
 
-        if (ai.needsToolRun())
-          console.log("Tool needs to run again, but we are not doing it here");
+        if (ai.needsToolRun()) console.log("Tool needs to run again, but we are not doing it here");
         return ai;
       });
   }
@@ -213,15 +178,11 @@ Main example file
   }
 
   // creating embeddings
-  if (
-    (await askQuestion("Do you want to run embedding example (y/n) ")) === "y"
-  ) {
-    await openAIthread
-      .runEmbeddingPrompt("What is the meaning of life?")
-      .then((ai) => {
-        console.log("Last response", ai.getLastResponseAsEmbbedingResult());
-        return ai;
-      });
+  if ((await askQuestion("Do you want to run embedding example (y/n) ")) === "y") {
+    await openAIthread.runEmbeddingPrompt("What is the meaning of life?").then((ai) => {
+      console.log("Last response", ai.getLastResponseAsEmbbedingResult());
+      return ai;
+    });
   }
 
   // generating speech
@@ -229,18 +190,13 @@ Main example file
     const speechFile = path.resolve("./speech.mp3");
     const line = await askQuestion("Enter a sentence to convert to speech ");
     let ai = await openAIthread.runSpeechPrompt(line as string);
-    await fs.promises.writeFile(
-      speechFile,
-      await ai.getLastResponseAsSpeechBufferResult()
-    );
+    await fs.promises.writeFile(speechFile, await ai.getLastResponseAsSpeechBufferResult());
 
     console.log("File written to ./speech.mp3");
   }
 
   // moderation example
-  if (
-    (await askQuestion("Do you want to run moderation example (y/n) ")) === "y"
-  ) {
+  if ((await askQuestion("Do you want to run moderation example (y/n) ")) === "y") {
     const line = await askQuestion("Enter a sentence to moderate: ");
     let ai = await openAIthread.runModerationPrompt(line as string);
     console.log("Moderation result", ai.getLastResponseAsModerationResult());

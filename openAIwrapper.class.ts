@@ -46,8 +46,8 @@ export class OpenAIWrapperClass {
   protected tools: Array<ChatCompletionTool> = [];
   protected temperature: number = 1;
   protected timeout: number = 600000; // 10 minutes
-  protected max_tokens: number = 150;
   protected streamAbortController: AbortController | undefined = undefined;
+  protected max_tokens: number | undefined = undefined;
 
   // internal thread values
   protected threadCount: OpenAIWrapperClassCount = {
@@ -69,6 +69,7 @@ export class OpenAIWrapperClass {
     | OpenAI.Chat.Completions.ChatCompletion
     | undefined = undefined;
   protected _needsToolRun: boolean = false;
+  protected streamCallbackFn: ((delta: string | undefined) => void) | undefined = undefined;
 
   /****************************************************************************************
 
@@ -298,15 +299,22 @@ export class OpenAIWrapperClass {
   }
 
   /**
+   * Sets the callback function for receiving stream deltas.
+   * @param deltaCallBackFn The callback function to be called with the stream delta.
+   */
+  setStreamCallback(deltaCallBackFn: (delta: string | undefined) => void) {
+    this.streamCallbackFn = deltaCallBackFn;
+
+    return this;
+  }
+
+  /**
    * Runs the prompt stream for generating completions.
    *
    * @param modelOptions - Optional parameters for the model.
    * @returns A promise that resolves to the response from the completion API.
    */
-  runPromptStream(
-    deltaCallBackFn: (delta: string | undefined) => void,
-    modelOptions?: CompletionCreateParamsBaseOptionals
-  ) {
+  runPromptStream(modelOptions?: CompletionCreateParamsBaseOptionals) {
     this.streamAbortController = undefined;
 
     return this.openai.chat.completions
@@ -322,7 +330,7 @@ export class OpenAIWrapperClass {
       .then(async (response) => {
         // reset the parameters for the stream
         let total = "";
-        if (deltaCallBackFn) deltaCallBackFn("");
+        if (this.streamCallbackFn) this.streamCallbackFn("");
         this.streamAbortController = response.controller;
 
         // let's emit the stream delta and the concated stream
@@ -330,7 +338,7 @@ export class OpenAIWrapperClass {
           const chunk_as_string = chunk.choices[0]?.delta?.content || "";
           total = total + chunk_as_string;
 
-          if (deltaCallBackFn) deltaCallBackFn(chunk_as_string);
+          if (this.streamCallbackFn) this.streamCallbackFn(chunk_as_string);
 
           if (this.debug) console.log("Stream output", chunk_as_string, total);
         }
@@ -380,8 +388,7 @@ export class OpenAIWrapperClass {
         }
 
         // message that the stream is completed
-        deltaCallBackFn;
-        if (deltaCallBackFn) deltaCallBackFn(undefined);
+        if (this.streamCallbackFn) this.streamCallbackFn(undefined);
 
         // make sure we cannot abort the stream anymore
         this.streamAbortController = undefined;
@@ -453,13 +460,15 @@ export class OpenAIWrapperClass {
 
             if (this.debug) console.log("Toolcall - function result", functionName, functionArgs);
 
-            this.messages.push({
-              tool_call_id: toolCall.id,
-              role: "tool",
-              //@ts-ignore
-              name: functionName,
-              content: functionResponse,
-            });
+            this._addmessages([
+              {
+                tool_call_id: toolCall.id,
+                role: "tool",
+                //@ts-ignore
+                name: functionName,
+                content: functionResponse,
+              },
+            ]);
           }
         }
       }
