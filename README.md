@@ -6,6 +6,14 @@ One of the key benefits is the ease of configuration through fluent method chain
 
 Using the class involves creating an instance with an API key. Developers can then chain method calls to configure the OpenAI model and other parameters. The runPrompt and runPromptStream methods initiate the generation process, providing flexibility for both synchronous and streaming scenarios.
 
+## RXJS and Angular's Signal implementation
+
+The class [`OpenAIWrapperRXJSClass`](./openAIwrapperRXJS.class.ts) adds RXJS capabilities to the message streams arising from API calls.
+
+The class [`OpenAIWrapperSignalClass`](./openAIwrapperRXJS.class.ts) uses `@angular/core` to provide a Signal implementation.
+
+## Example code
+
 Here's an example of how to use the class to generate a chat completion:
 
 ```
@@ -148,12 +156,6 @@ await openAIthread
     console.log("Last response", res.getLastResponseAsChatCompletionResult());
   });
 ```
-
-## RXJS and Angular's Signal implementation
-
-The class [`OpenAIWrapperRXJSClass`](./openAIwrapperRXJS.class.ts) adds RXJS capabilities to the message streams arising from API calls.
-
-The class [`OpenAIWrapperSignalClass`](./openAIwrapperRXJS.class.ts) uses `@angular/core` to provide a Signal implementation.
 
 ## Design objectives
 
