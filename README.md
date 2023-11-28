@@ -32,8 +32,6 @@ This example sets the model, enables debug mode, adds user and assistant message
 
 The setters for calling the API are present as builders and also as options to provide to the `runPrompt` (and other) methods.
 
-Besides creating the class, there is also integration with RXJS to allow for streamed responses. Maybe in future turn this into signals?
-
 ## Design objectives
 
 Use Builder Pattern: The class employs the builder pattern, allowing developers to configure and customize interactions with OpenAI's API through method chaining.
@@ -44,7 +42,7 @@ Configurability: Developers can easily set various options, including temperatur
 
 Debugging Support: Includes a debug mode that, when enabled, provides additional information about the chat, tool calls, and other relevant details for debugging purposes.
 
-Stream Interface using RXJS: Offers an interface for monitoring messages, stream delta, and concatenated stream, providing a reactive approach to handling responses.
+Stream Interface using callback function: Offers an interface for monitoring messages, stream delta, and concatenated stream, providing a reactive approach to handling responses.
 
 Extensibility: Designed to be easily extensible, allowing for the addition of new features or adaptations to future changes in the OpenAI API.
 

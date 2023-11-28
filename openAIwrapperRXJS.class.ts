@@ -8,6 +8,7 @@ import {
   ImageGenerateParams,
 } from "openai/resources";
 import { CompletionCreateParamsBase } from "openai/resources/completions";
+import { BehaviorSubject, Observable } from "rxjs";
 
 // can be more models than this
 type SupportedOpenAIModels = "gpt-3.5-turbo" | "gpt-4-1106-preview" | "gpt-3.5-turbo-1106";
@@ -38,19 +39,19 @@ export interface ImageGenerateParamsOptionals extends Omit<ImageGenerateParams, 
  */
 export class OpenAIWrapperClass {
   // the open AI interfaces
-  protected openai: OpenAI;
-  protected model: SupportedOpenAIModels = "gpt-3.5-turbo";
+  private openai: OpenAI;
+  private model: SupportedOpenAIModels = "gpt-3.5-turbo";
 
-  protected json_mode: boolean = false;
-  protected messages: ChatCompletionMessageParam[] = [];
-  protected tools: Array<ChatCompletionTool> = [];
-  protected temperature: number = 1;
-  protected timeout: number = 600000; // 10 minutes
-  protected max_tokens: number = 150;
-  protected streamAbortController: AbortController | undefined = undefined;
+  private json_mode: boolean = false;
+  private messages: ChatCompletionMessageParam[] = [];
+  private tools: Array<ChatCompletionTool> = [];
+  private temperature: number = 1;
+  private timeout: number = 600000; // 10 minutes
+  private max_tokens: number = 150;
+  private streamAbortController: AbortController | undefined = undefined;
 
   // internal thread values
-  protected threadCount: OpenAIWrapperClassCount = {
+  private threadCount: OpenAIWrapperClassCount = {
     prompt_tokens: 0,
     completion_tokens: 0,
     total_tokens: 0,
@@ -58,16 +59,28 @@ export class OpenAIWrapperClass {
   };
 
   // custom fields
-  protected receivedCompletions: Array<OpenAI.Chat.Completions.ChatCompletion> = [];
-  protected toolFunctionmap: Record<string, Function> = {};
-  protected debug: boolean = false;
-  protected lastResponse:
+  private receivedCompletions: Array<OpenAI.Chat.Completions.ChatCompletion> = [];
+  private toolFunctionmap: Record<string, Function> = {};
+  private debug: boolean = false;
+  private lastResponse:
     | OpenAI.Images.ImagesResponse
     | Response
     | OpenAI.Moderations.Moderation
     | number[]
     | OpenAI.Chat.Completions.ChatCompletion
     | undefined = undefined;
+
+  // the RXJS goodies
+  private messages$: BehaviorSubject<ChatCompletionMessageParam[]> = new BehaviorSubject<
+    ChatCompletionMessageParam[]
+  >([]);
+
+  private streamDelta$: BehaviorSubject<string | undefined> = new BehaviorSubject<
+    string | undefined
+  >(undefined);
+  private streamConcated$: BehaviorSubject<string | undefined> = new BehaviorSubject<
+    string | undefined
+  >(undefined);
 
   /****************************************************************************************
 
@@ -289,9 +302,10 @@ export class OpenAIWrapperClass {
     return this;
   }
 
-  // protected methods
-  protected _addmessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
+  // private methods
+  private _addmessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
     this.messages = this.messages.concat(messages);
+    this.messages$.next(messages);
 
     return this;
   }
@@ -302,10 +316,7 @@ export class OpenAIWrapperClass {
    * @param modelOptions - Optional parameters for the model.
    * @returns A promise that resolves to the response from the completion API.
    */
-  runPromptStream(
-    deltaCallBackFn: (delta: string | undefined) => void,
-    modelOptions?: CompletionCreateParamsBaseOptionals
-  ) {
+  runPromptStream(modelOptions?: CompletionCreateParamsBaseOptionals) {
     this.streamAbortController = undefined;
 
     return this.openai.chat.completions
@@ -321,7 +332,8 @@ export class OpenAIWrapperClass {
       .then(async (response) => {
         // reset the parameters for the stream
         let total = "";
-        if (deltaCallBackFn) deltaCallBackFn("");
+        this.streamConcated$.next("");
+        this.streamDelta$.next("");
         this.streamAbortController = response.controller;
 
         // let's emit the stream delta and the concated stream
@@ -329,7 +341,8 @@ export class OpenAIWrapperClass {
           const chunk_as_string = chunk.choices[0]?.delta?.content || "";
           total = total + chunk_as_string;
 
-          if (deltaCallBackFn) deltaCallBackFn(chunk_as_string);
+          this.streamDelta$.next(chunk_as_string);
+          this.streamConcated$.next(total);
 
           if (this.debug) console.log("Stream output", chunk_as_string, total);
         }
@@ -379,8 +392,8 @@ export class OpenAIWrapperClass {
         }
 
         // message that the stream is completed
-        deltaCallBackFn;
-        if (deltaCallBackFn) deltaCallBackFn(undefined);
+        this.streamDelta$.next(undefined);
+        this.streamConcated$.next(undefined);
 
         // make sure we cannot abort the stream anymore
         this.streamAbortController = undefined;
@@ -399,6 +412,22 @@ export class OpenAIWrapperClass {
 
       if (this.debug) console.log("Stream aborted");
     }
+  }
+
+  /**
+   * Returns an Observable that emits the stream delta as a string.
+   * @returns {Observable<string>} An Observable that emits the stream delta as a string.
+   */
+  getStreamDeltaAsObservable(): Observable<string | undefined> {
+    return this.streamDelta$.asObservable();
+  }
+
+  /**
+   * Returns an Observable that emits the concatenated stream as a string.
+   * @returns An Observable that emits the concatenated stream as a string.
+   */
+  getStreamConcatedAsObservable(): Observable<string | undefined> {
+    return this.streamConcated$.asObservable();
   }
 
   /**
@@ -476,6 +505,14 @@ export class OpenAIWrapperClass {
    */
   getMessages(): ChatCompletionMessageParam[] {
     return this.messages;
+  }
+
+  /**
+   * Returns an Observable that emits an array of ChatCompletionMessageParam objects whenever there is a new message.
+   * @returns {Observable<ChatCompletionMessageParam[]>} The Observable that emits the array of ChatCompletionMessageParam objects.
+   */
+  getMessagesAsObservable(): Observable<ChatCompletionMessageParam[]> {
+    return this.messages$.asObservable();
   }
 
   /**
@@ -719,14 +756,14 @@ export class OpenAIWrapperClass {
 
   /****************************************************************************************
 
-    protected stuff protected stuff protected stuff protected stuff protected stuff protected stuff
+    private stuff private stuff private stuff private stuff private stuff private stuff
 
   *****************************************************************************************/
 
   /**
    * Displays debug information about the prompt.
    */
-  protected _showPromptDebugInfo() {
+  private _showPromptDebugInfo() {
     console.log("showPromptDebugInfo messages", JSON.stringify(this.messages, null, 2));
     console.log("showPromptDebugInfo threadCount", this.threadCount);
     console.log("showPromptDebugInfo receivedCompletions", this.receivedCompletions);
@@ -736,7 +773,7 @@ export class OpenAIWrapperClass {
    * Updates the thread count based on the response from OpenAI Chat API.
    * @param response The response object from OpenAI Chat API.
    */
-  protected _updateThreadCount(response: OpenAI.Chat.Completions.ChatCompletion) {
+  private _updateThreadCount(response: OpenAI.Chat.Completions.ChatCompletion) {
     if (response.usage !== undefined) {
       const { prompt_tokens, completion_tokens, total_tokens } = response.usage;
       if (prompt_tokens !== undefined) this.threadCount.prompt_tokens += prompt_tokens;
