@@ -150,7 +150,7 @@ export class OpenAIWrapperClass {
   }
 
   /**
-   * Sets the functions for the OpenAIWrapperClass.
+   * Sets a number of tools for the OpenAIWrapperClass.
    *
    * @param functions - An array of ChatCompletionTool objects or FunctionDefinition objects.
    * @returns The updated OpenAIWrapperClass instance.
@@ -188,7 +188,7 @@ export class OpenAIWrapperClass {
   }
 
   /**
-   * Adds a tool with a function definition and associates it with a tool function.
+   * Adds a tool with a JS function definition and associates it with a tool function for OpenAI.
    *
    * @see https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models
    *
@@ -215,7 +215,7 @@ export class OpenAIWrapperClass {
   }
 
   /**
-   * Sets the tool function map for the OpenAIWrapperClass.
+   * Sets the tool-JS function map for the OpenAIWrapperClass.
    *
    * @param toolFunctionmap - The tool function map to set.
    * @returns The updated OpenAIWrapperClass instance.
@@ -227,10 +227,10 @@ export class OpenAIWrapperClass {
   }
 
   /**
-   * Sets a tool function for the OpenAIWrapperClass.
+   * Sets a JS function for a tool
    *
-   * @param name - The name of the tool function.
-   * @param fn - The tool function to be set.
+   * @param name - The name of the tool.
+   * @param toolFunctionInJS - The JS function to be associated with the tool.
    * @returns The updated OpenAIWrapperClass instance.
    */
   setToolFunction(name: string, toolFunctionInJS: Function): OpenAIWrapperClass {
@@ -280,7 +280,7 @@ export class OpenAIWrapperClass {
   }
 
   /**
-   * Appends a user message to the OpenAIWrapperClass.
+   * Appends a message with role `user` to the OpenAIWrapperClass.
    *
    * @param message - The message to be appended.
    * @returns The updated OpenAIWrapperClass instance.
@@ -291,7 +291,12 @@ export class OpenAIWrapperClass {
     return this;
   }
 
-  // protected methods
+  /**
+   * PRIVATE METHOD - Adds messages to the existing list of messages.
+   *
+   * @param messages - An array of ChatCompletionMessageParam objects representing the messages to be added.
+   * @returns The updated instance of OpenAIWrapperClass.
+   */
   protected _addmessages(messages: ChatCompletionMessageParam[]): OpenAIWrapperClass {
     this.messages = this.messages.concat(messages);
 
