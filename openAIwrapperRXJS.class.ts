@@ -2,6 +2,10 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import { BehaviorSubject, Observable } from "rxjs";
 import { CompletionCreateParamsBaseOptionals, OpenAIWrapperClass } from "./openAIwrapper.class";
 
+/**
+ * Represents a class that extends OpenAIWrapperClass and provides additional functionality for handling API out using RXJS
+ *
+ */
 export class OpenAIWrapperRXJSClass extends OpenAIWrapperClass {
   /**
    * Represents the messages$ BehaviorSubject.
