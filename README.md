@@ -152,6 +152,7 @@ await openAIthread
 ## RXJS and Angular's Signal implementation
 
 The class [`OpenAIWrapperRXJSClass`](./openAIwrapperRXJS.class.ts) adds RXJS capabilities to the message streams arising from API calls.
+
 The class [`OpenAIWrapperSignalClass`](./openAIwrapperRXJS.class.ts) uses `@angular/core` to provide a Signal implementation.
 
 ## Design objectives
