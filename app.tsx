@@ -147,8 +147,8 @@ Main example file
       .then((ai) => {
         console.log("Intermediate response", ai.getLastResponseAsChatCompletionResult());
         console.log("All messages", ai.getMessages());
-        // we need to do a second run because tools need to run
 
+        // we need to do a second run because tools need to run
         if (ai.needsToolRun()) return ai.runPrompt();
         else return ai;
       })

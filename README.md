@@ -100,9 +100,9 @@ await openAIthread
   .then((ai) => {
     console.log("Intermediate response", ai.getLastResponseAsChatCompletionResult());
     console.log("All messages", ai.getMessages());
-    // we need to do a second run because tools need to run
 
-    if (ai.)
+    // we need to do a second run because tools need to run
+    if (ai.needsToolRun()) return ai.runPrompt();
     return ai.runPrompt();
   })
   .then((ai) => {
