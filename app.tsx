@@ -50,11 +50,12 @@ Main example file
 
   // Example of how to use Dall-e
   if ((await askQuestion("Do you want to run Dall-e example (y/n) ")) === "y") {
+    const line = await askQuestion("Enter the image prompt - ");
     await openAIthread
-      .runImagePrompt("A painting of a person playing tennis", {
-        model: "dall-e-2",
+      .runImagePrompt(line as string, {
+        model: "dall-e-3",
         response_format: "url",
-        style: "natural",
+        style: "vivid",
       })
       .then((ai) => ai.getLastResponseAsImageResult())
       .then((response) => console.log(response));
