@@ -4,6 +4,8 @@ import path from "path";
 import readline from "readline";
 import { OpenAIWrapperClass, makeChatToolFunction } from "./openAIwrapper.class";
 
+//
+
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -168,8 +170,8 @@ Main example file
       .setMaxTokens(300)
       .setMessages([])
       .runVisionPrompt(
-        "What do I see on this picture?",
-        "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+        "Please solve the math problem on the picture, explain it step by step and give the answer.",
+        "https://media.cheggcdn.com/media/0db/0db03581-c196-4706-b306-176f84c9d835/phpBp2Yfa.png"
       )
       .then((ai) => {
         console.log("Last response", ai.getLastResponseAsVisionResult());

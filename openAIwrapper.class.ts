@@ -746,6 +746,48 @@ export class OpenAIWrapperClass {
 
   /****************************************************************************************
 
+    Serialisation stuff
+
+  *****************************************************************************************/
+
+  /**
+   * Serializes the OpenAIWrapperClass instance to a JSON string.
+   * @returns A JSON string representing the OpenAIWrapperClass instance.
+   */
+  toJSON(): string {
+    // let's iterate through all properties of the class and add them to the JSON
+    const json: { [key: string]: any } = {};
+    for (const key in this) {
+      if (hasOwn(this, key)) {
+        json[key] = this[key];
+      }
+    }
+    return JSON.stringify(json, null, 2);
+  }
+
+  /**
+   * Parses a JSON string and sets the properties of the class based on the JSON data.
+   * Only properties that exist in both the JSON and the class will be set.
+   * @param jsonString The JSON string to parse.
+   * @returns An object indicating the success of the operation. If successful, success will be true. If unsuccessful, success will be false and error will contain the error message.
+   */
+  fromJSON(jsonString: string): { success: false; error: any } | { success: true } {
+    // let's only set the properties that are in the JSON and in the class
+    try {
+      const json = JSON.parse(jsonString);
+      for (const key in json) {
+        if (hasOwn(json, key) && hasOwn(this, key)) {
+          this[key as keyof OpenAIWrapperClass] = json[key];
+        } else return { success: false, error: `Property ${key} is not defined in the class` };
+      }
+    } catch (e) {
+      return { success: false, error: e };
+    }
+    return { success: true };
+  }
+
+  /****************************************************************************************
+
     protected stuff protected stuff protected stuff protected stuff protected stuff protected stuff
 
   *****************************************************************************************/
@@ -783,7 +825,7 @@ export class OpenAIWrapperClass {
 export function makeChatToolFunction(
   name: string,
   description: string,
-  parameters: FunctionParameters | StrictFuntionParameters
+  parameters: FunctionParameters | StrictFunctionParameters
 ): ChatCompletionTool {
   return {
     type: "function",
@@ -798,7 +840,7 @@ export function makeChatToolFunction(
 /**
  * Represents a stricter definition of function parameters for chat functions - as FunctionParameters is too loose
  */
-export interface StrictFuntionParameters {
+export interface StrictFunctionParameters {
   type: "function";
   function: {
     name: string;
